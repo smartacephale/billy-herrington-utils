@@ -9,11 +9,6 @@ export default ({ mode }) => {
     run: {
       entry: path.resolve(__dirname, "./src/index.html")
     },
-    resolve: {
-      alias: {
-        vue: 'vue/dist/vue.esm-bundler.js',
-      }
-    },
     build: {
       watch: false,
       lib: {
