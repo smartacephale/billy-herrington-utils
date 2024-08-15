@@ -84,7 +84,7 @@ function S(e, t) {
   return m(r, e), r.innerHTML = e.innerHTML, (n = e.parentNode) == null || n.replaceChild(r, e), r;
 }
 function z(e) {
-  return Array.from(e).reduce((t, r) => (r.parentElement && t.includes(r.parentElement) && t.push(r.parentElement), t), []);
+  return Array.from(e).reduce((t, r) => (r.parentElement && !t.includes(r.parentElement) && t.push(r.parentElement), t), []);
 }
 function p(e) {
   return e.nextElementSibling ? e.nextElementSibling : e.parentElement ? p(e.parentElement) : null;
