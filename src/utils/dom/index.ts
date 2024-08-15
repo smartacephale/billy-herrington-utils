@@ -19,7 +19,7 @@ export function replaceElementTag(e: HTMLElement | Element, tagName: string) {
 
 export function getAllUniqueParents(elements: HTMLCollection): Array<HTMLElement | Element> {
   return Array.from(elements).reduce((acc, v) => {
-    if (v.parentElement && acc.includes(v.parentElement as HTMLElement)) { acc.push(v.parentElement); }
+    if (v.parentElement && !acc.includes(v.parentElement as HTMLElement)) { acc.push(v.parentElement); }
     return acc;
   }, [] as Array<HTMLElement | Element>);
 }
