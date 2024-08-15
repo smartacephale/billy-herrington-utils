@@ -1,0 +1,34 @@
+{
+  "name": "billy-herrington-utils",
+  "description": "daddy told us not to be ashamed of our utils",
+  "version": "1.0",
+  "license": "MIT",
+  "keywords": ["utils", "observer", "dom", "fetch", "arrays"],
+  "author": "smartacephale atm.mormon@protonmail.com (https://github.com/smartacephale)",
+  "type": "module",
+  "homepage": "https://github.com/smartacephale/billy-herrington-utils#readme",
+  "main": "./dist/billy-herrington-utils.umd.js",
+  "module": "./dist/billy-herrington-utils.es.js",
+  "repository": "github:smartacephale/billy-herrington-utils",
+  "bugs": {
+    "url": "https://github.com/smartacephale/billy-herrington-utils/issues",
+    "email": "atm.mormon@protonmail.com"
+  },
+  "browser": "./dist/billy-herrington-utils.es.js",
+  "unpkg": "./dist/billy-herrington-utils.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/billy-herrington-utils.es.js",
+      "require": "./dist/billy-herrington-utils.umd.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3",
+    "vite": "^5.4.0"
+  }
+}
