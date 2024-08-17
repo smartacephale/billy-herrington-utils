@@ -1,242 +1,316 @@
-var b = Object.defineProperty;
-var d = (e, t, r) => t in e ? b(e, t, { enumerable: !0, configurable: !0, writable: !0, value: r }) : e[t] = r;
-var o = (e, t, r) => d(e, typeof t != "symbol" ? t + "" : t, r);
-function I(e) {
-  return e.split(",").map((t) => t.trim().toLowerCase()).filter((t) => t);
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+function stringToWords(s) {
+  return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
 }
-function A(e) {
-  return (e == null ? void 0 : e.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase()) || "";
+function sanitizeStr(s) {
+  return (s == null ? void 0 : s.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase()) || "";
 }
-function E(e) {
-  return ((e == null ? void 0 : e.match(/\d+/gm)) || [0]).reverse().map((t, r) => parseInt(t) * 60 ** r).reduce((t, r) => t + r);
+function timeToSeconds(t) {
+  return ((t == null ? void 0 : t.match(/\d+/gm)) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
 }
-function T(e, t) {
-  return Number.isInteger(parseInt(e)) ? parseInt(e) : t;
+function parseIntegerOr(n, or) {
+  return Number.isInteger(parseInt(n)) ? parseInt(n) : or;
 }
-function L(e) {
-  const t = e.split(";").flatMap((r) => {
-    const n = r.match(/([\+\w+]+):(\w+)?/), i = n == null ? void 0 : n[2];
-    if (i) return n[1].split("+").map((s) => ({ [s]: i }));
-  }).filter((r) => r);
-  return Object.assign({}, ...t);
+function parseDataParams(str) {
+  const params = str.split(";").flatMap((s) => {
+    const parsed = s.match(/([\+\w+]+):(\w+)?/);
+    const value = parsed == null ? void 0 : parsed[2];
+    if (value) return parsed[1].split("+").map((p) => ({ [p]: value }));
+  }).filter((_) => _);
+  return Object.assign({}, ...params);
 }
-function O(e) {
-  return e.replace(/url\("|\"\).*/g, "");
+function parseCSSUrl(s) {
+  return s.replace(/url\("|\"\).*/g, "");
 }
-class l {
-  constructor(t) {
-    o(this, "observer");
-    this.callback = t, this.observer = new IntersectionObserver(this.handleIntersection.bind(this));
+class Observer {
+  constructor(callback) {
+    __publicField(this, "observer");
+    this.callback = callback;
+    this.observer = new IntersectionObserver(this.handleIntersection.bind(this));
   }
-  observe(t) {
-    this.observer.observe(t);
+  observe(target) {
+    this.observer.observe(target);
   }
-  throttle(t, r) {
-    this.observer.unobserve(t), setTimeout(() => this.observer.observe(t), r);
+  throttle(target, throttleTime) {
+    this.observer.unobserve(target);
+    setTimeout(() => this.observer.observe(target), throttleTime);
   }
-  handleIntersection(t) {
-    for (const r of t)
-      r.isIntersecting && this.callback(r.target);
-  }
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  static observeWhile(t, r, n) {
-    const i = new l(async (s) => {
-      await r() && i.throttle(s, n);
-    });
-    return i.observe(t), i;
-  }
-}
-class u {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  constructor(t, r = "data-lazy-load", n = !0) {
-    o(this, "lazyImgObserver");
-    o(this, "delazify", (t) => {
-      this.lazyImgObserver.observer.unobserve(t), t.src = t.getAttribute(this.attributeName), this.removeTagAfter && t.removeAttribute(this.attributeName);
-    });
-    this.attributeName = r, this.removeTagAfter = n, this.lazyImgObserver = new l((i) => {
-      t(i, this.delazify);
-    });
-  }
-  lazify(t, r, n) {
-    !r || !n || (r.setAttribute(this.attributeName, n), r.src = "", this.lazyImgObserver.observe(r));
+  handleIntersection(entries) {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        this.callback(entry.target);
+      }
+    }
   }
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  static create(t) {
-    return new u((n, i) => {
-      t(n) && i(n);
+  static observeWhile(target, callback, throttleTime) {
+    const observer_ = new Observer(async (target2) => {
+      const condition = await callback();
+      if (condition) observer_.throttle(target2, throttleTime);
     });
+    observer_.observe(target);
+    return observer_;
   }
 }
-function M(e, t = 6, r = 1) {
-  return (e + r) % t || t;
+class LazyImgLoader {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  constructor(callback, attributeName = "data-lazy-load", removeTagAfter = true) {
+    __publicField(this, "lazyImgObserver");
+    __publicField(this, "delazify", (target) => {
+      this.lazyImgObserver.observer.unobserve(target);
+      target.src = target.getAttribute(this.attributeName);
+      if (this.removeTagAfter) target.removeAttribute(this.attributeName);
+    });
+    this.attributeName = attributeName;
+    this.removeTagAfter = removeTagAfter;
+    this.lazyImgObserver = new Observer((target) => {
+      callback(target, this.delazify);
+    });
+  }
+  lazify(_target, img, imgSrc) {
+    if (!img || !imgSrc) return;
+    img.setAttribute(this.attributeName, imgSrc);
+    img.src = "";
+    this.lazyImgObserver.observe(img);
+  }
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  static create(callback) {
+    const lazyImgLoader = new LazyImgLoader((target, delazify) => {
+      if (callback(target)) {
+        delazify(target);
+      }
+    });
+    return lazyImgLoader;
+  }
 }
-function h(e) {
-  const t = new DOMParser().parseFromString(e, "text/html").body;
-  return t.children.length > 1 ? t : t.firstElementChild;
+function circularShift(n, c = 6, s = 1) {
+  return (n + s) % c || c;
 }
-function m(e, t) {
-  for (const r of t.attributes)
-    r.nodeValue && e.setAttribute(r.nodeName, r.nodeValue);
+function parseDom(html) {
+  const parsed = new DOMParser().parseFromString(html, "text/html").body;
+  return parsed.children.length > 1 ? parsed : parsed.firstElementChild;
 }
-function S(e, t) {
-  var n;
-  const r = document.createElement(t);
-  return m(r, e), r.innerHTML = e.innerHTML, (n = e.parentNode) == null || n.replaceChild(r, e), r;
+function copyAttributes(target, source) {
+  for (const attr of source.attributes) {
+    attr.nodeValue && target.setAttribute(attr.nodeName, attr.nodeValue);
+  }
 }
-function z(e) {
-  return Array.from(e).reduce((t, r) => (r.parentElement && !t.includes(r.parentElement) && t.push(r.parentElement), t), []);
+function replaceElementTag(e, tagName) {
+  var _a;
+  const newTagElement = document.createElement(tagName);
+  copyAttributes(newTagElement, e);
+  newTagElement.innerHTML = e.innerHTML;
+  (_a = e.parentNode) == null ? void 0 : _a.replaceChild(newTagElement, e);
+  return newTagElement;
 }
-function p(e) {
-  return e.nextElementSibling ? e.nextElementSibling : e.parentElement ? p(e.parentElement) : null;
+function getAllUniqueParents(elements) {
+  return Array.from(elements).reduce((acc, v) => {
+    if (v.parentElement && !acc.includes(v.parentElement)) {
+      acc.push(v.parentElement);
+    }
+    return acc;
+  }, []);
 }
-function v(e, t, r) {
-  const n = new MutationObserver((i) => {
-    const s = e.querySelector(t);
-    s && (n.disconnect(), r(s));
+function findNextSibling(el) {
+  if (el.nextElementSibling) return el.nextElementSibling;
+  if (el.parentElement) return findNextSibling(el.parentElement);
+  return null;
+}
+function waitForElementExists(parent, selector, callback) {
+  const observer = new MutationObserver((_mutations) => {
+    const el = parent.querySelector(selector);
+    if (el) {
+      observer.disconnect();
+      callback(el);
+    }
   });
-  n.observe(document.body, { childList: !0, subtree: !0 });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
-function F(e, t) {
-  let r = e.children.length;
-  new MutationObserver((i, s) => {
-    for (const a of i)
-      a.type === "childList" && r !== e.children.length && (r = e.children.length, t(s, r));
-  }).observe(e, { childList: !0 });
+function watchElementChildrenCount(element, callback) {
+  let count = element.children.length;
+  const observer = new MutationObserver((mutationList, observer2) => {
+    for (const mutation of mutationList) {
+      if (mutation.type === "childList") {
+        if (count !== element.children.length) {
+          count = element.children.length;
+          callback(observer2, count);
+        }
+      }
+    }
+  });
+  observer.observe(element, { childList: true });
 }
-function P(e, t, r = 1e3, n = { childList: !0, subtree: !0, attributes: !0 }) {
-  let i, s;
-  new MutationObserver((y, w) => {
-    const c = Date.now();
-    i && c - i < r && s && clearTimeout(s), s = setTimeout(t, r), i = c;
-  }).observe(e, n);
+function watchDomChangesWithThrottle(element, callback, throttle = 1e3, options = { childList: true, subtree: true, attributes: true }) {
+  let lastMutationTime;
+  let timeout;
+  const observer = new MutationObserver((_mutationList, _observer) => {
+    const now = Date.now();
+    if (lastMutationTime && now - lastMutationTime < throttle) {
+      timeout && clearTimeout(timeout);
+    }
+    timeout = setTimeout(callback, throttle);
+    lastMutationTime = now;
+  });
+  observer.observe(element, options);
 }
-function x(e = { append: "", after: "", button: "", cbBefore: () => {
+function downloader(options = { append: "", after: "", button: "", cbBefore: () => {
 } }) {
-  var r, n;
-  const t = h(e.button);
-  e.append && ((r = document.querySelector(e.append)) == null || r.append(t)), e.after && ((n = document.querySelector(e.after)) == null || n.after(t)), t.addEventListener("click", (i) => {
-    i.preventDefault(), e.cbBefore && e.cbBefore(), v(document.body, "video", (s) => {
-      window.location.href = s.getAttribute("src");
+  var _a, _b;
+  const btn = parseDom(options.button);
+  if (options.append) (_a = document.querySelector(options.append)) == null ? void 0 : _a.append(btn);
+  if (options.after) (_b = document.querySelector(options.after)) == null ? void 0 : _b.after(btn);
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (options.cbBefore) options.cbBefore();
+    waitForElementExists(document.body, "video", (video) => {
+      window.location.href = video.getAttribute("src");
     });
   });
 }
-const g = [
+const MOBILE_UA = [
   "Mozilla/5.0 (Linux; Android 10; K)",
   "AppleWebKit/537.36 (KHTML, like Gecko)",
   "Chrome/114.0.0.0 Mobile Safari/537.36"
 ].join(" ");
-function f(e, t = { html: !1, mobile: !1 }) {
-  const r = {};
-  return t.mobile && Object.assign(r, { headers: new Headers({ "User-Agent": g }) }), fetch(e, r).then((n) => n.text()).then((n) => t.html ? h(n) : n);
+function fetchWith(url, options = { html: false, mobile: false }) {
+  const reqOpts = {};
+  if (options.mobile) Object.assign(reqOpts, { headers: new Headers({ "User-Agent": MOBILE_UA }) });
+  return fetch(url, reqOpts).then((r) => r.text()).then((r) => options.html ? parseDom(r) : r);
 }
-const C = (e) => f(e, { html: !0 }), D = (e) => f(e);
-function H(e) {
-  const t = new FormData();
-  return Object.entries(e).forEach(([r, n]) => t.append(r, n)), t;
+const fetchHtml = (url) => fetchWith(url, { html: true });
+const fetchText = (url) => fetchWith(url);
+function objectToFormData(object) {
+  const formData = new FormData();
+  Object.entries(object).forEach(([k, v]) => formData.append(k, v));
+  return formData;
 }
-function N(e, t, r) {
-  for (const n of t)
-    e.addEventListener(n, r, !0);
+function listenEvents(dom, events, callback) {
+  for (const e of events) {
+    dom.addEventListener(e, callback, true);
+  }
 }
-class j {
-  constructor(t, r = !0) {
-    o(this, "tick");
+class Tick {
+  constructor(delay, startImmediate = true) {
+    __publicField(this, "tick");
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    o(this, "callbackFinal");
-    this.delay = t, this.startImmediate = r, this.tick = null, this.delay = t, this.startImmediate = r;
+    __publicField(this, "callbackFinal");
+    this.delay = delay;
+    this.startImmediate = startImmediate;
+    this.tick = null;
+    this.delay = delay;
+    this.startImmediate = startImmediate;
   }
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  start(t, r = null) {
-    this.stop(), this.callbackFinal = r, this.startImmediate && t(), this.tick = setInterval(t, this.delay);
+  start(callback, callbackFinal = null) {
+    this.stop();
+    this.callbackFinal = callbackFinal;
+    if (this.startImmediate) callback();
+    this.tick = setInterval(callback, this.delay);
   }
   stop() {
-    this.tick !== null && (clearInterval(this.tick), this.tick = null), this.callbackFinal && (this.callbackFinal(), this.callbackFinal = null);
+    if (this.tick !== null) {
+      clearInterval(this.tick);
+      this.tick = null;
+    }
+    if (this.callbackFinal) {
+      this.callbackFinal();
+      this.callbackFinal = null;
+    }
   }
 }
-function q() {
+function isMob() {
   return /iPhone|Android/i.test(navigator.userAgent);
 }
-async function W(e) {
-  const t = [];
-  for await (const r of e)
-    t.push(await r());
-  return t;
+async function computeAsyncOneAtTime(iterable) {
+  const res = [];
+  for await (const f of iterable) {
+    res.push(await f());
+  }
+  return res;
 }
-function B(e) {
-  return new Promise((t) => setTimeout(t, e));
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
-class U {
+class SyncPull {
   constructor() {
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    o(this, "pull", []);
-    o(this, "lock", !1);
+    __publicField(this, "pull", []);
+    __publicField(this, "lock", false);
   }
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  getHighPriorityFirst(t = 0) {
-    if (t > 3 || this.pull.length === 0) return;
-    const r = this.pull.findIndex((n) => n.p === t);
-    if (r >= 0) {
-      const n = this.pull[r].v;
-      return this.pull = this.pull.slice(0, r).concat(this.pull.slice(r + 1)), n;
+  getHighPriorityFirst(p = 0) {
+    if (p > 3 || this.pull.length === 0) return void 0;
+    const i = this.pull.findIndex((e) => e.p === p);
+    if (i >= 0) {
+      const res = this.pull[i].v;
+      this.pull = this.pull.slice(0, i).concat(this.pull.slice(i + 1));
+      return res;
     }
-    return this.getHighPriorityFirst(t + 1);
+    return this.getHighPriorityFirst(p + 1);
   }
   *pullGenerator() {
-    for (; this.pull.length > 0; )
+    while (this.pull.length > 0) {
       yield this.getHighPriorityFirst();
+    }
   }
   async processPull() {
     if (!this.lock) {
-      this.lock = !0;
-      for await (const t of this.pullGenerator())
-        await t();
-      this.lock = !1;
+      this.lock = true;
+      for await (const f of this.pullGenerator()) {
+        await f();
+      }
+      this.lock = false;
     }
   }
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  push(t) {
-    this.pull.push(t), this.processPull();
+  push(x) {
+    this.pull.push(x);
+    this.processPull();
   }
 }
-function _(e, t) {
-  const r = [];
-  for (let n = 0; n < e.length; n += t)
-    r.push(e.slice(n, n + t));
-  return r;
+function chunks(arr, n) {
+  const res = [];
+  for (let i = 0; i < arr.length; i += n) {
+    res.push(arr.slice(i, i + n));
+  }
+  return res;
 }
-function G(e, t = 1) {
-  return [...Array(e).keys()].map((r) => r + t);
+function range(size, startAt = 1) {
+  return [...Array(size).keys()].map((i) => i + startAt);
 }
 export {
-  u as LazyImgLoader,
-  g as MOBILE_UA,
-  l as Observer,
-  U as SyncPull,
-  j as Tick,
-  _ as chunks,
-  M as circularShift,
-  W as computeAsyncOneAtTime,
-  m as copyAttributes,
-  x as downloader,
-  C as fetchHtml,
-  D as fetchText,
-  f as fetchWith,
-  p as findNextSibling,
-  z as getAllUniqueParents,
-  q as isMob,
-  N as listenEvents,
-  H as objectToFormData,
-  O as parseCSSUrl,
-  L as parseDataParams,
-  h as parseDom,
-  T as parseIntegerOr,
-  G as range,
-  S as replaceElementTag,
-  A as sanitizeStr,
-  I as stringToWords,
-  E as timeToSeconds,
-  B as wait,
-  v as waitForElementExists,
-  P as watchDomChangesWithThrottle,
-  F as watchElementChildrenCount
+  LazyImgLoader,
+  MOBILE_UA,
+  Observer,
+  SyncPull,
+  Tick,
+  chunks,
+  circularShift,
+  computeAsyncOneAtTime,
+  copyAttributes,
+  downloader,
+  fetchHtml,
+  fetchText,
+  fetchWith,
+  findNextSibling,
+  getAllUniqueParents,
+  isMob,
+  listenEvents,
+  objectToFormData,
+  parseCSSUrl,
+  parseDataParams,
+  parseDom,
+  parseIntegerOr,
+  range,
+  replaceElementTag,
+  sanitizeStr,
+  stringToWords,
+  timeToSeconds,
+  wait,
+  waitForElementExists,
+  watchDomChangesWithThrottle,
+  watchElementChildrenCount
 };
+//# sourceMappingURL=billy-herrington-utils.es.js.map

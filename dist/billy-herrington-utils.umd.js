@@ -1,1 +1,320 @@
-(function(i,l){typeof exports=="object"&&typeof module<"u"?l(exports):typeof define=="function"&&define.amd?define(["exports"],l):(i=typeof globalThis<"u"?globalThis:i||self,l(i.bhutils={}))})(this,function(i){"use strict";var B=Object.defineProperty;var _=(i,l,c)=>l in i?B(i,l,{enumerable:!0,configurable:!0,writable:!0,value:c}):i[l]=c;var o=(i,l,c)=>_(i,typeof l!="symbol"?l+"":l,c);function l(n){return n.split(",").map(e=>e.trim().toLowerCase()).filter(e=>e)}function c(n){return(n==null?void 0:n.replace(/\n|\t/," ").replace(/ {2,}/," ").trim().toLowerCase())||""}function w(n){return((n==null?void 0:n.match(/\d+/gm))||[0]).reverse().map((e,t)=>parseInt(e)*60**t).reduce((e,t)=>e+t)}function T(n,e){return Number.isInteger(parseInt(n))?parseInt(n):e}function E(n){const e=n.split(";").flatMap(t=>{const r=t.match(/([\+\w+]+):(\w+)?/),s=r==null?void 0:r[2];if(s)return r[1].split("+").map(a=>({[a]:s}))}).filter(t=>t);return Object.assign({},...e)}function k(n){return n.replace(/url\("|\"\).*/g,"")}class u{constructor(e){o(this,"observer");this.callback=e,this.observer=new IntersectionObserver(this.handleIntersection.bind(this))}observe(e){this.observer.observe(e)}throttle(e,t){this.observer.unobserve(e),setTimeout(()=>this.observer.observe(e),t)}handleIntersection(e){for(const t of e)t.isIntersecting&&this.callback(t.target)}static observeWhile(e,t,r){const s=new u(async a=>{await t()&&s.throttle(a,r)});return s.observe(e),s}}class h{constructor(e,t="data-lazy-load",r=!0){o(this,"lazyImgObserver");o(this,"delazify",e=>{this.lazyImgObserver.observer.unobserve(e),e.src=e.getAttribute(this.attributeName),this.removeTagAfter&&e.removeAttribute(this.attributeName)});this.attributeName=t,this.removeTagAfter=r,this.lazyImgObserver=new u(s=>{e(s,this.delazify)})}lazify(e,t,r){!t||!r||(t.setAttribute(this.attributeName,r),t.src="",this.lazyImgObserver.observe(t))}static create(e){return new h((r,s)=>{e(r)&&s(r)})}}function A(n,e=6,t=1){return(n+t)%e||e}function f(n){const e=new DOMParser().parseFromString(n,"text/html").body;return e.children.length>1?e:e.firstElementChild}function m(n,e){for(const t of e.attributes)t.nodeValue&&n.setAttribute(t.nodeName,t.nodeValue)}function I(n,e){var r;const t=document.createElement(e);return m(t,n),t.innerHTML=n.innerHTML,(r=n.parentNode)==null||r.replaceChild(t,n),t}function S(n){return Array.from(n).reduce((e,t)=>(t.parentElement&&!e.includes(t.parentElement)&&e.push(t.parentElement),e),[])}function v(n){return n.nextElementSibling?n.nextElementSibling:n.parentElement?v(n.parentElement):null}function g(n,e,t){const r=new MutationObserver(s=>{const a=n.querySelector(e);a&&(r.disconnect(),t(a))});r.observe(document.body,{childList:!0,subtree:!0})}function O(n,e){let t=n.children.length;new MutationObserver((s,a)=>{for(const b of s)b.type==="childList"&&t!==n.children.length&&(t=n.children.length,e(a,t))}).observe(n,{childList:!0})}function L(n,e,t=1e3,r={childList:!0,subtree:!0,attributes:!0}){let s,a;new MutationObserver((G,K)=>{const y=Date.now();s&&y-s<t&&a&&clearTimeout(a),a=setTimeout(e,t),s=y}).observe(n,r)}function M(n={append:"",after:"",button:"",cbBefore:()=>{}}){var t,r;const e=f(n.button);n.append&&((t=document.querySelector(n.append))==null||t.append(e)),n.after&&((r=document.querySelector(n.after))==null||r.after(e)),e.addEventListener("click",s=>{s.preventDefault(),n.cbBefore&&n.cbBefore(),g(document.body,"video",a=>{window.location.href=a.getAttribute("src")})})}const p=["Mozilla/5.0 (Linux; Android 10; K)","AppleWebKit/537.36 (KHTML, like Gecko)","Chrome/114.0.0.0 Mobile Safari/537.36"].join(" ");function d(n,e={html:!1,mobile:!1}){const t={};return e.mobile&&Object.assign(t,{headers:new Headers({"User-Agent":p})}),fetch(n,t).then(r=>r.text()).then(r=>e.html?f(r):r)}const P=n=>d(n,{html:!0}),z=n=>d(n);function F(n){const e=new FormData;return Object.entries(n).forEach(([t,r])=>e.append(t,r)),e}function C(n,e,t){for(const r of e)n.addEventListener(r,t,!0)}class D{constructor(e,t=!0){o(this,"tick");o(this,"callbackFinal");this.delay=e,this.startImmediate=t,this.tick=null,this.delay=e,this.startImmediate=t}start(e,t=null){this.stop(),this.callbackFinal=t,this.startImmediate&&e(),this.tick=setInterval(e,this.delay)}stop(){this.tick!==null&&(clearInterval(this.tick),this.tick=null),this.callbackFinal&&(this.callbackFinal(),this.callbackFinal=null)}}function H(){return/iPhone|Android/i.test(navigator.userAgent)}async function N(n){const e=[];for await(const t of n)e.push(await t());return e}function j(n){return new Promise(e=>setTimeout(e,n))}class W{constructor(){o(this,"pull",[]);o(this,"lock",!1)}getHighPriorityFirst(e=0){if(e>3||this.pull.length===0)return;const t=this.pull.findIndex(r=>r.p===e);if(t>=0){const r=this.pull[t].v;return this.pull=this.pull.slice(0,t).concat(this.pull.slice(t+1)),r}return this.getHighPriorityFirst(e+1)}*pullGenerator(){for(;this.pull.length>0;)yield this.getHighPriorityFirst()}async processPull(){if(!this.lock){this.lock=!0;for await(const e of this.pullGenerator())await e();this.lock=!1}}push(e){this.pull.push(e),this.processPull()}}function U(n,e){const t=[];for(let r=0;r<n.length;r+=e)t.push(n.slice(r,r+e));return t}function q(n,e=1){return[...Array(n).keys()].map(t=>t+e)}i.LazyImgLoader=h,i.MOBILE_UA=p,i.Observer=u,i.SyncPull=W,i.Tick=D,i.chunks=U,i.circularShift=A,i.computeAsyncOneAtTime=N,i.copyAttributes=m,i.downloader=M,i.fetchHtml=P,i.fetchText=z,i.fetchWith=d,i.findNextSibling=v,i.getAllUniqueParents=S,i.isMob=H,i.listenEvents=C,i.objectToFormData=F,i.parseCSSUrl=k,i.parseDataParams=E,i.parseDom=f,i.parseIntegerOr=T,i.range=q,i.replaceElementTag=I,i.sanitizeStr=c,i.stringToWords=l,i.timeToSeconds=w,i.wait=j,i.waitForElementExists=g,i.watchDomChangesWithThrottle=L,i.watchElementChildrenCount=O,Object.defineProperty(i,Symbol.toStringTag,{value:"Module"})});
+(function(global, factory) {
+  typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, factory(global.bhutils = {}));
+})(this, function(exports2) {
+  "use strict";var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  function stringToWords(s) {
+    return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
+  }
+  function sanitizeStr(s) {
+    return (s == null ? void 0 : s.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase()) || "";
+  }
+  function timeToSeconds(t) {
+    return ((t == null ? void 0 : t.match(/\d+/gm)) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
+  }
+  function parseIntegerOr(n, or) {
+    return Number.isInteger(parseInt(n)) ? parseInt(n) : or;
+  }
+  function parseDataParams(str) {
+    const params = str.split(";").flatMap((s) => {
+      const parsed = s.match(/([\+\w+]+):(\w+)?/);
+      const value = parsed == null ? void 0 : parsed[2];
+      if (value) return parsed[1].split("+").map((p) => ({ [p]: value }));
+    }).filter((_) => _);
+    return Object.assign({}, ...params);
+  }
+  function parseCSSUrl(s) {
+    return s.replace(/url\("|\"\).*/g, "");
+  }
+  class Observer {
+    constructor(callback) {
+      __publicField(this, "observer");
+      this.callback = callback;
+      this.observer = new IntersectionObserver(this.handleIntersection.bind(this));
+    }
+    observe(target) {
+      this.observer.observe(target);
+    }
+    throttle(target, throttleTime) {
+      this.observer.unobserve(target);
+      setTimeout(() => this.observer.observe(target), throttleTime);
+    }
+    handleIntersection(entries) {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          this.callback(entry.target);
+        }
+      }
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    static observeWhile(target, callback, throttleTime) {
+      const observer_ = new Observer(async (target2) => {
+        const condition = await callback();
+        if (condition) observer_.throttle(target2, throttleTime);
+      });
+      observer_.observe(target);
+      return observer_;
+    }
+  }
+  class LazyImgLoader {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    constructor(callback, attributeName = "data-lazy-load", removeTagAfter = true) {
+      __publicField(this, "lazyImgObserver");
+      __publicField(this, "delazify", (target) => {
+        this.lazyImgObserver.observer.unobserve(target);
+        target.src = target.getAttribute(this.attributeName);
+        if (this.removeTagAfter) target.removeAttribute(this.attributeName);
+      });
+      this.attributeName = attributeName;
+      this.removeTagAfter = removeTagAfter;
+      this.lazyImgObserver = new Observer((target) => {
+        callback(target, this.delazify);
+      });
+    }
+    lazify(_target, img, imgSrc) {
+      if (!img || !imgSrc) return;
+      img.setAttribute(this.attributeName, imgSrc);
+      img.src = "";
+      this.lazyImgObserver.observe(img);
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    static create(callback) {
+      const lazyImgLoader = new LazyImgLoader((target, delazify) => {
+        if (callback(target)) {
+          delazify(target);
+        }
+      });
+      return lazyImgLoader;
+    }
+  }
+  function circularShift(n, c = 6, s = 1) {
+    return (n + s) % c || c;
+  }
+  function parseDom(html) {
+    const parsed = new DOMParser().parseFromString(html, "text/html").body;
+    return parsed.children.length > 1 ? parsed : parsed.firstElementChild;
+  }
+  function copyAttributes(target, source) {
+    for (const attr of source.attributes) {
+      attr.nodeValue && target.setAttribute(attr.nodeName, attr.nodeValue);
+    }
+  }
+  function replaceElementTag(e, tagName) {
+    var _a;
+    const newTagElement = document.createElement(tagName);
+    copyAttributes(newTagElement, e);
+    newTagElement.innerHTML = e.innerHTML;
+    (_a = e.parentNode) == null ? void 0 : _a.replaceChild(newTagElement, e);
+    return newTagElement;
+  }
+  function getAllUniqueParents(elements) {
+    return Array.from(elements).reduce((acc, v) => {
+      if (v.parentElement && !acc.includes(v.parentElement)) {
+        acc.push(v.parentElement);
+      }
+      return acc;
+    }, []);
+  }
+  function findNextSibling(el) {
+    if (el.nextElementSibling) return el.nextElementSibling;
+    if (el.parentElement) return findNextSibling(el.parentElement);
+    return null;
+  }
+  function waitForElementExists(parent, selector, callback) {
+    const observer = new MutationObserver((_mutations) => {
+      const el = parent.querySelector(selector);
+      if (el) {
+        observer.disconnect();
+        callback(el);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+  function watchElementChildrenCount(element, callback) {
+    let count = element.children.length;
+    const observer = new MutationObserver((mutationList, observer2) => {
+      for (const mutation of mutationList) {
+        if (mutation.type === "childList") {
+          if (count !== element.children.length) {
+            count = element.children.length;
+            callback(observer2, count);
+          }
+        }
+      }
+    });
+    observer.observe(element, { childList: true });
+  }
+  function watchDomChangesWithThrottle(element, callback, throttle = 1e3, options = { childList: true, subtree: true, attributes: true }) {
+    let lastMutationTime;
+    let timeout;
+    const observer = new MutationObserver((_mutationList, _observer) => {
+      const now = Date.now();
+      if (lastMutationTime && now - lastMutationTime < throttle) {
+        timeout && clearTimeout(timeout);
+      }
+      timeout = setTimeout(callback, throttle);
+      lastMutationTime = now;
+    });
+    observer.observe(element, options);
+  }
+  function downloader(options = { append: "", after: "", button: "", cbBefore: () => {
+  } }) {
+    var _a, _b;
+    const btn = parseDom(options.button);
+    if (options.append) (_a = document.querySelector(options.append)) == null ? void 0 : _a.append(btn);
+    if (options.after) (_b = document.querySelector(options.after)) == null ? void 0 : _b.after(btn);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (options.cbBefore) options.cbBefore();
+      waitForElementExists(document.body, "video", (video) => {
+        window.location.href = video.getAttribute("src");
+      });
+    });
+  }
+  const MOBILE_UA = [
+    "Mozilla/5.0 (Linux; Android 10; K)",
+    "AppleWebKit/537.36 (KHTML, like Gecko)",
+    "Chrome/114.0.0.0 Mobile Safari/537.36"
+  ].join(" ");
+  function fetchWith(url, options = { html: false, mobile: false }) {
+    const reqOpts = {};
+    if (options.mobile) Object.assign(reqOpts, { headers: new Headers({ "User-Agent": MOBILE_UA }) });
+    return fetch(url, reqOpts).then((r) => r.text()).then((r) => options.html ? parseDom(r) : r);
+  }
+  const fetchHtml = (url) => fetchWith(url, { html: true });
+  const fetchText = (url) => fetchWith(url);
+  function objectToFormData(object) {
+    const formData = new FormData();
+    Object.entries(object).forEach(([k, v]) => formData.append(k, v));
+    return formData;
+  }
+  function listenEvents(dom, events, callback) {
+    for (const e of events) {
+      dom.addEventListener(e, callback, true);
+    }
+  }
+  class Tick {
+    constructor(delay, startImmediate = true) {
+      __publicField(this, "tick");
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      __publicField(this, "callbackFinal");
+      this.delay = delay;
+      this.startImmediate = startImmediate;
+      this.tick = null;
+      this.delay = delay;
+      this.startImmediate = startImmediate;
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    start(callback, callbackFinal = null) {
+      this.stop();
+      this.callbackFinal = callbackFinal;
+      if (this.startImmediate) callback();
+      this.tick = setInterval(callback, this.delay);
+    }
+    stop() {
+      if (this.tick !== null) {
+        clearInterval(this.tick);
+        this.tick = null;
+      }
+      if (this.callbackFinal) {
+        this.callbackFinal();
+        this.callbackFinal = null;
+      }
+    }
+  }
+  function isMob() {
+    return /iPhone|Android/i.test(navigator.userAgent);
+  }
+  async function computeAsyncOneAtTime(iterable) {
+    const res = [];
+    for await (const f of iterable) {
+      res.push(await f());
+    }
+    return res;
+  }
+  function wait(milliseconds) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+  class SyncPull {
+    constructor() {
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+      __publicField(this, "pull", []);
+      __publicField(this, "lock", false);
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    getHighPriorityFirst(p = 0) {
+      if (p > 3 || this.pull.length === 0) return void 0;
+      const i = this.pull.findIndex((e) => e.p === p);
+      if (i >= 0) {
+        const res = this.pull[i].v;
+        this.pull = this.pull.slice(0, i).concat(this.pull.slice(i + 1));
+        return res;
+      }
+      return this.getHighPriorityFirst(p + 1);
+    }
+    *pullGenerator() {
+      while (this.pull.length > 0) {
+        yield this.getHighPriorityFirst();
+      }
+    }
+    async processPull() {
+      if (!this.lock) {
+        this.lock = true;
+        for await (const f of this.pullGenerator()) {
+          await f();
+        }
+        this.lock = false;
+      }
+    }
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    push(x) {
+      this.pull.push(x);
+      this.processPull();
+    }
+  }
+  function chunks(arr, n) {
+    const res = [];
+    for (let i = 0; i < arr.length; i += n) {
+      res.push(arr.slice(i, i + n));
+    }
+    return res;
+  }
+  function range(size, startAt = 1) {
+    return [...Array(size).keys()].map((i) => i + startAt);
+  }
+  exports2.LazyImgLoader = LazyImgLoader;
+  exports2.MOBILE_UA = MOBILE_UA;
+  exports2.Observer = Observer;
+  exports2.SyncPull = SyncPull;
+  exports2.Tick = Tick;
+  exports2.chunks = chunks;
+  exports2.circularShift = circularShift;
+  exports2.computeAsyncOneAtTime = computeAsyncOneAtTime;
+  exports2.copyAttributes = copyAttributes;
+  exports2.downloader = downloader;
+  exports2.fetchHtml = fetchHtml;
+  exports2.fetchText = fetchText;
+  exports2.fetchWith = fetchWith;
+  exports2.findNextSibling = findNextSibling;
+  exports2.getAllUniqueParents = getAllUniqueParents;
+  exports2.isMob = isMob;
+  exports2.listenEvents = listenEvents;
+  exports2.objectToFormData = objectToFormData;
+  exports2.parseCSSUrl = parseCSSUrl;
+  exports2.parseDataParams = parseDataParams;
+  exports2.parseDom = parseDom;
+  exports2.parseIntegerOr = parseIntegerOr;
+  exports2.range = range;
+  exports2.replaceElementTag = replaceElementTag;
+  exports2.sanitizeStr = sanitizeStr;
+  exports2.stringToWords = stringToWords;
+  exports2.timeToSeconds = timeToSeconds;
+  exports2.wait = wait;
+  exports2.waitForElementExists = waitForElementExists;
+  exports2.watchDomChangesWithThrottle = watchDomChangesWithThrottle;
+  exports2.watchElementChildrenCount = watchElementChildrenCount;
+  Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
+});
+//# sourceMappingURL=billy-herrington-utils.umd.js.map
