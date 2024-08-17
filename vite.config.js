@@ -7,9 +7,6 @@ export default ({ mode }) => {
     define: {
       "process.env": {},
     },
-    run: {
-      entry: path.resolve(__dirname, "./src/index.html")
-    },
     build: {
       sourcemap: true,
       minify: false,
