@@ -30,8 +30,7 @@ export function findNextSibling(el: HTMLElement | Element) {
   return null;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: any): void {
+export function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: (el: Element) => void): void {
   const observer = new MutationObserver((_mutations) => {
     const el = parent.querySelector(selector);
     if (el) {
@@ -42,8 +41,8 @@ export function waitForElementExists(parent: HTMLElement | Element, selector: st
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export function watchElementChildrenCount(element: HTMLElement | Element, callback: any): void {
+export function watchElementChildrenCount(element: HTMLElement | Element,
+  callback: (observer: MutationObserver, count: number) => void): void {
   let count = element.children.length;
   const observer = new MutationObserver((mutationList, observer) => {
     for (const mutation of mutationList) {
@@ -58,8 +57,7 @@ export function watchElementChildrenCount(element: HTMLElement | Element, callba
   observer.observe(element, { childList: true });
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: any,
+export function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: () => void,
   throttle = 1000, options: Record<string, boolean> = { childList: true, subtree: true, attributes: true }) {
   let lastMutationTime: number;
   let timeout: number;
@@ -85,7 +83,7 @@ export function downloader(options = { append: "", after: "", button: "", cbBefo
 
     if (options.cbBefore) options.cbBefore();
 
-    waitForElementExists(document.body, 'video', (video: HTMLVideoElement) => {
+    waitForElementExists(document.body, 'video', (video: Element) => {
       window.location.href = video.getAttribute('src') as string;
     });
   });

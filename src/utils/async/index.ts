@@ -1,6 +1,5 @@
 // https://2ality.com/2016/10/asynchronous-iteration.html
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export async function computeAsyncOneAtTime(iterable: Iterable<any>) {
+export async function computeAsyncOneAtTime(iterable: Iterable<() => Promise<void>>) {
   const res = [];
   for await (const f of iterable) {
     res.push(await f());
@@ -12,14 +11,16 @@ export function wait(milliseconds: number) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-// do async one at time
+interface SyncPullObject {
+  v: () => Promise<void>,
+  p: number
+}
+
 export class SyncPull {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  pull: Array<any> = [];
+  pull: Array<SyncPullObject> = [];
   lock = false;
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  getHighPriorityFirst(p = 0): any {
+  getHighPriorityFirst(p = 0): (() => Promise<void>) | undefined {
     if (p > 3 || this.pull.length === 0) return undefined;
     const i = this.pull.findIndex(e => e.p === p);
     if (i >= 0) {
@@ -40,14 +41,13 @@ export class SyncPull {
     if (!this.lock) {
       this.lock = true;
       for await (const f of this.pullGenerator()) {
-        await f();
+        await f?.();
       }
       this.lock = false;
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  push(x: any) {
+  push(x: SyncPullObject) {
     this.pull.push(x);
     this.processPull();
   }

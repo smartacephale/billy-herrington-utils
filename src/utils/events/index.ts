@@ -1,5 +1,4 @@
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export function listenEvents(dom: HTMLElement | Element, events: Array<string>, callback: any): void {
+export function listenEvents(dom: HTMLElement | Element, events: Array<string>, callback: (e: Event) => void): void {
   for (const e of events) {
     dom.addEventListener(e, callback, true);
   }
@@ -7,8 +6,7 @@ export function listenEvents(dom: HTMLElement | Element, events: Array<string>, 
 
 export class Tick {
   private tick: null | number;
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  private callbackFinal: any;
+  private callbackFinal: (() => void) | undefined;
 
   constructor(private delay: number, private startImmediate = true) {
     this.tick = null;
@@ -16,8 +14,7 @@ export class Tick {
     this.startImmediate = startImmediate;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  start(callback: any, callbackFinal = null) {
+  start(callback: () => void, callbackFinal = undefined) {
     this.stop();
     this.callbackFinal = callbackFinal;
     if (this.startImmediate) callback();
@@ -31,7 +28,7 @@ export class Tick {
     }
     if (this.callbackFinal) {
       this.callbackFinal();
-      this.callbackFinal = null;
+      this.callbackFinal = undefined;
     }
   }
 }

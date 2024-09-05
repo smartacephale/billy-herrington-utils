@@ -34,8 +34,8 @@ export class Observer {
 
 export class LazyImgLoader {
   public lazyImgObserver: Observer;
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  constructor(callback: any, private attributeName = 'data-lazy-load', private removeTagAfter = true) {
+  constructor(callback: (target: Element, delazify: (target: HTMLImageElement) => void) => void,
+    private attributeName = 'data-lazy-load', private removeTagAfter = true) {
     this.lazyImgObserver = new Observer((target: Element) => {
       callback(target, this.delazify);
     });
