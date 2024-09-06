@@ -48,7 +48,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         }
       }
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     static observeWhile(target, callback, throttleTime) {
       const observer_ = new Observer(async (target2) => {
         const condition = await callback();
@@ -59,18 +58,18 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   class LazyImgLoader {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    constructor(callback, attributeName = "data-lazy-load", removeTagAfter = true) {
+    constructor(shouldDelazify) {
       __publicField(this, "lazyImgObserver");
+      __publicField(this, "attributeName", "data-lazy-load");
       __publicField(this, "delazify", (target) => {
         this.lazyImgObserver.observer.unobserve(target);
         target.src = target.getAttribute(this.attributeName);
-        if (this.removeTagAfter) target.removeAttribute(this.attributeName);
+        target.removeAttribute(this.attributeName);
       });
-      this.attributeName = attributeName;
-      this.removeTagAfter = removeTagAfter;
       this.lazyImgObserver = new Observer((target) => {
-        callback(target, this.delazify);
+        if (shouldDelazify(target)) {
+          this.delazify(target);
+        }
       });
     }
     lazify(_target, img, imgSrc) {
@@ -78,15 +77,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       img.setAttribute(this.attributeName, imgSrc);
       img.src = "";
       this.lazyImgObserver.observe(img);
-    }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    static create(callback) {
-      const lazyImgLoader = new LazyImgLoader((target, delazify) => {
-        if (callback(target)) {
-          delazify(target);
-        }
-      });
-      return lazyImgLoader;
     }
   }
   function circularShift(n, c = 6, s = 1) {
@@ -198,7 +188,6 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   class Tick {
     constructor(delay, startImmediate = true) {
       __publicField(this, "tick");
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       __publicField(this, "callbackFinal");
       this.delay = delay;
       this.startImmediate = startImmediate;
@@ -206,8 +195,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.delay = delay;
       this.startImmediate = startImmediate;
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    start(callback, callbackFinal = null) {
+    start(callback, callbackFinal = void 0) {
       this.stop();
       this.callbackFinal = callbackFinal;
       if (this.startImmediate) callback();
@@ -220,7 +208,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
       if (this.callbackFinal) {
         this.callbackFinal();
-        this.callbackFinal = null;
+        this.callbackFinal = void 0;
       }
     }
   }
@@ -239,11 +227,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   class SyncPull {
     constructor() {
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
       __publicField(this, "pull", []);
       __publicField(this, "lock", false);
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     getHighPriorityFirst(p = 0) {
       if (p > 3 || this.pull.length === 0) return void 0;
       const i = this.pull.findIndex((e) => e.p === p);
@@ -263,12 +249,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       if (!this.lock) {
         this.lock = true;
         for await (const f of this.pullGenerator()) {
-          await f();
+          await (f == null ? void 0 : f());
         }
         this.lock = false;
       }
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     push(x) {
       this.pull.push(x);
       this.processPull();

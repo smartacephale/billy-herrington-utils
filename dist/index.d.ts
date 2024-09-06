@@ -2,7 +2,7 @@ export declare function chunks<T>(arr: Array<T>, n: number): Array<Array<T>>;
 
 export declare function circularShift(n: number, c?: number, s?: number): number;
 
-export declare function computeAsyncOneAtTime(iterable: Iterable<any>): Promise<any[]>;
+export declare function computeAsyncOneAtTime(iterable: Iterable<() => Promise<void>>): Promise<void[]>;
 
 export declare function copyAttributes(target: HTMLElement | Element, source: HTMLElement | Element): void;
 
@@ -26,16 +26,14 @@ export declare function getAllUniqueParents(elements: HTMLCollection): Array<HTM
 export declare function isMob(): boolean;
 
 export declare class LazyImgLoader {
-    private attributeName;
-    private removeTagAfter;
     lazyImgObserver: Observer;
-    constructor(callback: any, attributeName?: string, removeTagAfter?: boolean);
+    private attributeName;
+    constructor(shouldDelazify: (target: Element) => boolean);
     lazify(_target: Element, img: HTMLImageElement, imgSrc: string): void;
     delazify: (target: HTMLImageElement) => void;
-    static create(callback: any): LazyImgLoader;
 }
 
-export declare function listenEvents(dom: HTMLElement | Element, events: Array<string>, callback: any): void;
+export declare function listenEvents(dom: HTMLElement | Element, events: Array<string>, callback: (e: Event) => void): void;
 
 export declare const MOBILE_UA: string;
 
@@ -48,7 +46,7 @@ export declare class Observer {
     observe(target: Element): void;
     throttle(target: Element, throttleTime: number): void;
     handleIntersection(entries: Iterable<IntersectionObserverEntry>): void;
-    static observeWhile(target: Element, callback: any, throttleTime: number): Observer;
+    static observeWhile(target: Element, callback: () => Promise<boolean> | boolean, throttleTime: number): Observer;
 }
 
 export declare function parseCSSUrl(s: string): string;
@@ -68,12 +66,17 @@ export declare function sanitizeStr(s: string): string;
 export declare function stringToWords(s: string): Array<string>;
 
 export declare class SyncPull {
-    pull: Array<any>;
+    pull: Array<SyncPullObject>;
     lock: boolean;
-    getHighPriorityFirst(p?: number): any;
-    pullGenerator(): Generator<any, void, unknown>;
+    getHighPriorityFirst(p?: number): (() => Promise<void>) | undefined;
+    pullGenerator(): Generator<(() => Promise<void>) | undefined, void, unknown>;
     processPull(): Promise<void>;
-    push(x: any): void;
+    push(x: SyncPullObject): void;
+}
+
+declare interface SyncPullObject {
+    v: () => Promise<void>;
+    p: number;
 }
 
 export declare class Tick {
@@ -82,7 +85,7 @@ export declare class Tick {
     private tick;
     private callbackFinal;
     constructor(delay: number, startImmediate?: boolean);
-    start(callback: any, callbackFinal?: null): void;
+    start(callback: () => void, callbackFinal?: undefined): void;
     stop(): void;
 }
 
@@ -90,10 +93,10 @@ export declare function timeToSeconds(t: string): number;
 
 export declare function wait(milliseconds: number): Promise<unknown>;
 
-export declare function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: any): void;
+export declare function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: (el: Element) => void): void;
 
-export declare function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: any, throttle?: number, options?: Record<string, boolean>): void;
+export declare function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: () => void, throttle?: number, options?: Record<string, boolean>): void;
 
-export declare function watchElementChildrenCount(element: HTMLElement | Element, callback: any): void;
+export declare function watchElementChildrenCount(element: HTMLElement | Element, callback: (observer: MutationObserver, count: number) => void): void;
 
 export { }

@@ -21,8 +21,7 @@ export class Observer {
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  static observeWhile(target: Element, callback: any, throttleTime: number) {
+  static observeWhile(target: Element, callback: () => Promise<boolean> | boolean, throttleTime: number) {
     const observer_ = new Observer(async (target: Element) => {
       const condition = await callback();
       if (condition) observer_.throttle(target, throttleTime);
@@ -34,10 +33,13 @@ export class Observer {
 
 export class LazyImgLoader {
   public lazyImgObserver: Observer;
-  constructor(callback: (target: Element, delazify: (target: HTMLImageElement) => void) => void,
-    private attributeName = 'data-lazy-load', private removeTagAfter = true) {
+  private attributeName = 'data-lazy-load';
+
+  constructor(shouldDelazify: (target: Element) => boolean) {
     this.lazyImgObserver = new Observer((target: Element) => {
-      callback(target, this.delazify);
+      if (shouldDelazify(target)) {
+        this.delazify(target as HTMLImageElement);
+      }
     });
   }
 
@@ -51,17 +53,6 @@ export class LazyImgLoader {
   delazify = (target: HTMLImageElement) => {
     this.lazyImgObserver.observer.unobserve(target);
     target.src = target.getAttribute(this.attributeName) as string;
-    if (this.removeTagAfter) target.removeAttribute(this.attributeName);
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  static create(callback: any) {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    const lazyImgLoader = new LazyImgLoader((target: Element, delazify: any) => {
-      if (callback(target)) {
-        delazify(target);
-      }
-    });
-    return lazyImgLoader;
+    target.removeAttribute(this.attributeName);
   }
 }
