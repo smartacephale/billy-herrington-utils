@@ -1,9 +1,5 @@
 export function chunks<T>(arr: Array<T>, n: number): Array<Array<T>> {
-  const res = [];
-  for (let i = 0; i < arr.length; i += n) {
-    res.push(arr.slice(i, i + n));
-  }
-  return res;
+  return Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
 }
 
 export function range(size: number, startAt: number = 1, step: number = 1): number[] {
