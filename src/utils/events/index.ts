@@ -5,26 +5,22 @@ export function listenEvents(dom: HTMLElement | Element, events: Array<string>, 
 }
 
 export class Tick {
-  private tick: null | number;
-  private callbackFinal: (() => void) | undefined;
+  private tick?: number;
+  private callbackFinal?: () => void;
 
-  constructor(private delay: number, private startImmediate = true) {
-    this.tick = null;
-    this.delay = delay;
-    this.startImmediate = startImmediate;
-  }
+  constructor(private delay: number, private startImmediate: boolean = true) {}
 
-  start(callback: () => void, callbackFinal = undefined) {
+  public start(callback: () => void, callbackFinal?: () => void): void {
     this.stop();
     this.callbackFinal = callbackFinal;
     if (this.startImmediate) callback();
-    this.tick = setInterval(callback, this.delay);
+    this.tick = window.setInterval(callback, this.delay);
   }
 
-  stop() {
-    if (this.tick !== null) {
+  public stop(): void {
+    if (this.tick !== undefined) {
       clearInterval(this.tick);
-      this.tick = null;
+      this.tick = undefined;
     }
     if (this.callbackFinal) {
       this.callbackFinal();
