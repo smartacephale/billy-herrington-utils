@@ -9,10 +9,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
   }
   function sanitizeStr(s) {
-    return (s == null ? void 0 : s.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase()) || "";
+    return s?.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase() || "";
   }
   function timeToSeconds(t) {
-    return ((t == null ? void 0 : t.match(/\d+/gm)) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
+    return (t?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
   }
   function parseIntegerOr(n, or) {
     return Number.isInteger(parseInt(n)) ? parseInt(n) : or;
@@ -20,7 +20,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function parseDataParams(str) {
     const params = str.split(";").flatMap((s) => {
       const parsed = s.match(/([\+\w+]+):(\w+)?/);
-      const value = parsed == null ? void 0 : parsed[2];
+      const value = parsed?.[2];
       if (value) return parsed[1].split("+").map((p) => ({ [p]: value }));
     }).filter((_) => _);
     return Object.assign({}, ...params);
@@ -92,11 +92,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function replaceElementTag(e, tagName) {
-    var _a;
     const newTagElement = document.createElement(tagName);
     copyAttributes(newTagElement, e);
     newTagElement.innerHTML = e.innerHTML;
-    (_a = e.parentNode) == null ? void 0 : _a.replaceChild(newTagElement, e);
+    e.parentNode?.replaceChild(newTagElement, e);
     return newTagElement;
   }
   function getAllUniqueParents(elements) {
@@ -151,10 +150,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   }
   function downloader(options = { append: "", after: "", button: "", cbBefore: () => {
   } }) {
-    var _a, _b;
     const btn = parseDom(options.button);
-    if (options.append) (_a = document.querySelector(options.append)) == null ? void 0 : _a.append(btn);
-    if (options.after) (_b = document.querySelector(options.after)) == null ? void 0 : _b.after(btn);
+    if (options.append) document.querySelector(options.append)?.append(btn);
+    if (options.after) document.querySelector(options.after)?.after(btn);
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       if (options.cbBefore) options.cbBefore();
@@ -225,38 +223,47 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function wait(milliseconds) {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
-  class SyncPull {
-    constructor() {
-      __publicField(this, "pull", []);
-      __publicField(this, "lock", false);
+  class AsyncPool {
+    constructor(max = 1, pool = []) {
+      __publicField(this, "cur", 0);
+      __publicField(this, "finished");
+      __publicField(this, "_resolve");
+      this.max = max;
+      this.pool = pool;
+      this.finished = new Promise((resolve) => {
+        this._resolve = resolve;
+      });
     }
     getHighPriorityFirst(p = 0) {
-      if (p > 3 || this.pull.length === 0) return void 0;
-      const i = this.pull.findIndex((e) => e.p === p);
+      if (p > 3 || this.pool.length === 0) return void 0;
+      const i = this.pool.findIndex((e) => e.p === p);
       if (i >= 0) {
-        const res = this.pull[i].v;
-        this.pull = this.pull.slice(0, i).concat(this.pull.slice(i + 1));
+        const res = this.pool[i].v;
+        this.pool = this.pool.slice(0, i).concat(this.pool.slice(i + 1));
         return res;
       }
       return this.getHighPriorityFirst(p + 1);
     }
-    *pullGenerator() {
-      while (this.pull.length > 0) {
-        yield this.getHighPriorityFirst();
+    async runTask() {
+      this.cur++;
+      const f = this.getHighPriorityFirst();
+      await f?.();
+      this.cur--;
+      this.runTasks();
+    }
+    runTasks() {
+      if (!this.pool.length) this._resolve?.(true);
+      if (this.cur < this.max) {
+        this.runTask();
+        this.runTasks();
       }
     }
-    async processPull() {
-      if (!this.lock) {
-        this.lock = true;
-        for await (const f of this.pullGenerator()) {
-          await (f == null ? void 0 : f());
-        }
-        this.lock = false;
-      }
+    async run() {
+      this.runTasks();
+      return this.finished;
     }
     push(x) {
-      this.pull.push(x);
-      this.processPull();
+      this.pool.push("p" in x ? x : { v: x, p: 0 });
     }
   }
   function chunks(arr, n) {
@@ -269,10 +276,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function range(size, startAt = 1) {
     return [...Array(size).keys()].map((i) => i + startAt);
   }
+  exports2.AsyncPool = AsyncPool;
   exports2.LazyImgLoader = LazyImgLoader;
   exports2.MOBILE_UA = MOBILE_UA;
   exports2.Observer = Observer;
-  exports2.SyncPull = SyncPull;
   exports2.Tick = Tick;
   exports2.chunks = chunks;
   exports2.circularShift = circularShift;

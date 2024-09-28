@@ -1,3 +1,17 @@
+export declare class AsyncPool {
+    private max;
+    private pool;
+    cur: number;
+    private finished;
+    private _resolve?;
+    constructor(max?: number, pool?: Array<SyncPoolObject>);
+    getHighPriorityFirst(p?: number): (() => Promise<void>) | undefined;
+    runTask(): Promise<void>;
+    runTasks(): void;
+    run(): Promise<boolean>;
+    push(x: SyncPoolObject | (() => Promise<void>)): void;
+}
+
 export declare function chunks<T>(arr: Array<T>, n: number): Array<Array<T>>;
 
 export declare function circularShift(n: number, c?: number, s?: number): number;
@@ -65,16 +79,7 @@ export declare function sanitizeStr(s: string): string;
 
 export declare function stringToWords(s: string): Array<string>;
 
-export declare class SyncPull {
-    pull: Array<SyncPullObject>;
-    lock: boolean;
-    getHighPriorityFirst(p?: number): (() => Promise<void>) | undefined;
-    pullGenerator(): Generator<(() => Promise<void>) | undefined, void, unknown>;
-    processPull(): Promise<void>;
-    push(x: SyncPullObject): void;
-}
-
-declare interface SyncPullObject {
+declare interface SyncPoolObject {
     v: () => Promise<void>;
     p: number;
 }

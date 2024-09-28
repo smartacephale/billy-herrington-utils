@@ -8,12 +8,12 @@ export async function computeAsyncOneAtTime(iterable: Iterable<() => Promise<voi
 }
 
 export function wait(milliseconds: number) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 interface SyncPoolObject {
-  v: () => Promise<void>,
-  p: number
+  v: () => Promise<void>;
+  p: number;
 }
 
 export class AsyncPool {
@@ -21,7 +21,10 @@ export class AsyncPool {
   private finished: Promise<boolean>;
   private _resolve?: (value: boolean | PromiseLike<boolean>) => void;
 
-  constructor(private max = 1, private pool: Array<SyncPoolObject> = []) {
+  constructor(
+    private max = 1,
+    private pool: Array<SyncPoolObject> = [],
+  ) {
     this.finished = new Promise((resolve) => {
       this._resolve = resolve;
     });
@@ -29,7 +32,7 @@ export class AsyncPool {
 
   getHighPriorityFirst(p = 0): (() => Promise<void>) | undefined {
     if (p > 3 || this.pool.length === 0) return undefined;
-    const i = this.pool.findIndex(e => e.p === p);
+    const i = this.pool.findIndex((e) => e.p === p);
     if (i >= 0) {
       const res = this.pool[i].v;
       this.pool = this.pool.slice(0, i).concat(this.pool.slice(i + 1));
@@ -60,6 +63,6 @@ export class AsyncPool {
   }
 
   push(x: SyncPoolObject | (() => Promise<void>)) {
-    this.pool.push('p' in x ? x : ({ v: x, p: 0 }));
+    this.pool.push('p' in x ? x : { v: x, p: 0 });
   }
 }
