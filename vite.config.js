@@ -8,6 +8,7 @@ export default ({ mode }) => {
       "process.env": {},
     },
     build: {
+      target: 'es2020',
       sourcemap: true,
       minify: false,
       lib: {
@@ -15,6 +16,14 @@ export default ({ mode }) => {
         entry: path.resolve(__dirname, "./src/index.ts"),
         name: "bhutils",
         fileName: (format) => `billy-herrington-utils.${format}.js`,
+      },
+      esbuild: {
+        target: "es2020"
+      },
+      optimizeDeps: {
+        esbuildOptions: {
+          target: "es2020",
+        }
       }
     },
     plugins: [dts({ rollupTypes: true })]

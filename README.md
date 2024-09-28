@@ -56,6 +56,6 @@ npm i billy-herrington-utils
 | `isMob()` | Checks if the current device is a mobile device. | N/A | `if (isMob()) { ... }` |
 | `computeAsyncOneAtTime(iterable)` | Executes asynchronous functions one at a time. | `iterable: Iterable<() => Promise<any>>` | `computeAsyncOneAtTime(asyncFunctions).then((results) => { ... });` |
 | `wait(milliseconds)` | Waits for a given number of milliseconds. | `milliseconds: number` | `await wait(1000);` |
-| `SyncPull` | A class for managing asynchronous tasks with priorities. | N/A | `const syncPull = new SyncPull(); syncPull.push(() => { ... });` |
+| `AsyncPool` | A class for managing asynchronous tasks with priorities. | N/A | `const spool = new AsyncPool(); spool.push(() => { v: () => fetch(...), p: 1 });` |
 | `chunks(arr, n)` | Splits an array into chunks of a given size. | `arr: Array<any>`, `n: number` | `const chunks = chunks([1, 2, 3, 4, 5], 2);` -> `[[1, 2], [3, 4], [5]]` |
 | `range(start, end)` | Creates a range of numbers from `start` to `end` (inclusive). | `start: number`, `end: number` | `const numbers = range(1, 5);` -> `[1, 2, 3, 4, 5]` |

@@ -11,44 +11,55 @@ export function wait(milliseconds: number) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-interface SyncPullObject {
+interface SyncPoolObject {
   v: () => Promise<void>,
   p: number
 }
 
-export class SyncPull {
-  pull: Array<SyncPullObject> = [];
-  lock = false;
+export class AsyncPool {
+  cur = 0;
+  private finished: Promise<boolean>;
+  private _resolve?: (value: boolean | PromiseLike<boolean>) => void;
+
+  constructor(private max = 1, private pool: Array<SyncPoolObject> = []) {
+    this.finished = new Promise((resolve) => {
+      this._resolve = resolve;
+    });
+  }
 
   getHighPriorityFirst(p = 0): (() => Promise<void>) | undefined {
-    if (p > 3 || this.pull.length === 0) return undefined;
-    const i = this.pull.findIndex(e => e.p === p);
+    if (p > 3 || this.pool.length === 0) return undefined;
+    const i = this.pool.findIndex(e => e.p === p);
     if (i >= 0) {
-      const res = this.pull[i].v;
-      this.pull = this.pull.slice(0, i).concat(this.pull.slice(i + 1));
+      const res = this.pool[i].v;
+      this.pool = this.pool.slice(0, i).concat(this.pool.slice(i + 1));
       return res;
     }
     return this.getHighPriorityFirst(p + 1);
   }
 
-  *pullGenerator() {
-    while (this.pull.length > 0) {
-      yield this.getHighPriorityFirst();
+  async runTask() {
+    this.cur++;
+    const f = this.getHighPriorityFirst();
+    await f?.();
+    this.cur--;
+    this.runTasks();
+  }
+
+  runTasks() {
+    if (!this.pool.length) this._resolve?.(true);
+    if (this.cur < this.max) {
+      this.runTask();
+      this.runTasks();
     }
   }
 
-  async processPull() {
-    if (!this.lock) {
-      this.lock = true;
-      for await (const f of this.pullGenerator()) {
-        await f?.();
-      }
-      this.lock = false;
-    }
+  async run() {
+    this.runTasks();
+    return this.finished;
   }
 
-  push(x: SyncPullObject) {
-    this.pull.push(x);
-    this.processPull();
+  push(x: SyncPoolObject | (() => Promise<void>)) {
+    this.pool.push('p' in x ? x : ({ v: x, p: 0 }));
   }
 }

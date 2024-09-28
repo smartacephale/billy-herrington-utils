@@ -16,5 +16,5 @@ export {
   watchElementChildrenCount
 } from "./utils/dom";
 export { isMob } from "./utils/device";
-export { computeAsyncOneAtTime, SyncPull, wait } from "./utils/async";
+export { computeAsyncOneAtTime, AsyncPool, wait } from "./utils/async";
 export { chunks, range } from "./utils/arrays";
