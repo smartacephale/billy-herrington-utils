@@ -6,6 +6,6 @@ export function chunks<T>(arr: Array<T>, n: number): Array<Array<T>> {
   return res;
 }
 
-export function range(size: number, startAt = 1): Array<number> {
-  return [...Array(size).keys()].map(i => i + startAt);
+export function range(size: number, startAt: number = 1, step: number = 1): number[] {
+  return Array.from({ length: size }, (_, index) => startAt + index * step);
 }
