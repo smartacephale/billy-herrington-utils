@@ -248,7 +248,10 @@ class AsyncPool {
     this.runTasks();
   }
   runTasks() {
-    if (!this.pool.length) this._resolve?.(true);
+    if (!this.pool.length) {
+      this._resolve?.(true);
+      return;
+    }
     if (this.cur < this.max) {
       this.runTask();
       this.runTasks();

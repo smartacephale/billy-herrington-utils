@@ -252,7 +252,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.runTasks();
     }
     runTasks() {
-      if (!this.pool.length) this._resolve?.(true);
+      if (!this.pool.length) {
+        this._resolve?.(true);
+        return;
+      }
       if (this.cur < this.max) {
         this.runTask();
         this.runTasks();
