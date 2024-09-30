@@ -4,12 +4,19 @@ export declare class AsyncPool {
     cur: number;
     private finished;
     private _resolve?;
-    constructor(max?: number, pool?: Array<SyncPoolObject>);
-    getHighPriorityFirst(p?: number): (() => Promise<void>) | undefined;
-    runTask(): Promise<void>;
-    runTasks(): void;
+    static doNAsyncAtOnce(max?: number, pool?: Array<AsyncPoolTask | (() => Promise<void>)>): Promise<boolean>;
+    constructor(max?: number, pool?: Array<AsyncPoolTask>);
+    private getHighPriorityFirst;
+    private runTask;
+    private checkCompletion;
+    private runTasks;
     run(): Promise<boolean>;
-    push(x: SyncPoolObject | (() => Promise<void>)): void;
+    push(x: AsyncPoolTask | (() => Promise<void>)): void;
+}
+
+declare interface AsyncPoolTask {
+    v: () => Promise<void>;
+    p: number;
 }
 
 export declare function chunks<T>(arr: Array<T>, n: number): Array<Array<T>>;
@@ -65,13 +72,13 @@ export declare class Observer {
 
 export declare function parseCSSUrl(s: string): string;
 
-export declare function parseDataParams(str: string): any;
+export declare function parseDataParams(str: string): Record<string, string>;
 
 export declare function parseDom(html: string): HTMLElement;
 
 export declare function parseIntegerOr(n: string | number, or: number): number;
 
-export declare function range(size: number, startAt?: number): Array<number>;
+export declare function range(size: number, startAt?: number, step?: number): number[];
 
 export declare function replaceElementTag(e: HTMLElement | Element, tagName: string): HTMLElement;
 
@@ -79,18 +86,13 @@ export declare function sanitizeStr(s: string): string;
 
 export declare function stringToWords(s: string): Array<string>;
 
-declare interface SyncPoolObject {
-    v: () => Promise<void>;
-    p: number;
-}
-
 export declare class Tick {
     private delay;
     private startImmediate;
-    private tick;
-    private callbackFinal;
+    private tick?;
+    private callbackFinal?;
     constructor(delay: number, startImmediate?: boolean);
-    start(callback: () => void, callbackFinal?: undefined): void;
+    start(callback: () => void, callbackFinal?: () => void): void;
     stop(): void;
 }
 

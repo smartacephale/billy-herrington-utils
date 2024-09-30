@@ -21,7 +21,7 @@ export class AsyncPool {
   private finished: Promise<boolean>;
   private _resolve?: (value: boolean | PromiseLike<boolean>) => void;
 
-  public static async doNAsyncAtOnce(max = 1, pool: Array<AsyncPoolTask | (() => Promise<void>)>) {
+  public static async doNAsyncAtOnce(max = 1, pool: Array<AsyncPoolTask | (() => Promise<void>)> = []) {
     const spool = new AsyncPool(max);
     pool.forEach(f => spool.push(f));
     return spool.run();

@@ -15,15 +15,21 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return (t?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
   }
   function parseIntegerOr(n, or) {
-    return Number.isInteger(parseInt(n)) ? parseInt(n) : or;
+    return ((num) => Number.isNaN(num) ? or : num)(parseInt(n));
   }
   function parseDataParams(str) {
-    const params = str.split(";").flatMap((s) => {
-      const parsed = s.match(/([\+\w+]+):(\w+)?/);
-      const value = parsed?.[2];
-      if (value) return parsed[1].split("+").map((p) => ({ [p]: value }));
-    }).filter((_) => _);
-    return Object.assign({}, ...params);
+    return str.split(";").reduce((acc, s) => {
+      const parsed = s.match(/([\+\w]+):(\w+)?/);
+      if (parsed) {
+        const [, key, value] = parsed;
+        if (value) {
+          key.split("+").forEach((p) => {
+            acc[p] = value;
+          });
+        }
+      }
+      return acc;
+    }, {});
   }
   function parseCSSUrl(s) {
     return s.replace(/url\("|\"\).*/g, "");
@@ -189,20 +195,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       __publicField(this, "callbackFinal");
       this.delay = delay;
       this.startImmediate = startImmediate;
-      this.tick = null;
-      this.delay = delay;
-      this.startImmediate = startImmediate;
     }
-    start(callback, callbackFinal = void 0) {
+    start(callback, callbackFinal) {
       this.stop();
       this.callbackFinal = callbackFinal;
       if (this.startImmediate) callback();
-      this.tick = setInterval(callback, this.delay);
+      this.tick = window.setInterval(callback, this.delay);
     }
     stop() {
-      if (this.tick !== null) {
+      if (this.tick !== void 0) {
         clearInterval(this.tick);
-        this.tick = null;
+        this.tick = void 0;
       }
       if (this.callbackFinal) {
         this.callbackFinal();
@@ -234,31 +237,45 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         this._resolve = resolve;
       });
     }
+    static async doNAsyncAtOnce(max = 1, pool = []) {
+      const spool = new AsyncPool(max);
+      pool.forEach((f) => spool.push(f));
+      return spool.run();
+    }
     getHighPriorityFirst(p = 0) {
       if (p > 3 || this.pool.length === 0) return void 0;
       const i = this.pool.findIndex((e) => e.p === p);
       if (i >= 0) {
         const res = this.pool[i].v;
-        this.pool = this.pool.slice(0, i).concat(this.pool.slice(i + 1));
+        this.pool.splice(i, 1);
         return res;
       }
       return this.getHighPriorityFirst(p + 1);
     }
     async runTask() {
-      this.cur++;
-      const f = this.getHighPriorityFirst();
-      await f?.();
-      this.cur--;
-      this.runTasks();
-    }
-    runTasks() {
-      if (!this.pool.length) {
-        this._resolve?.(true);
+      const taskFunc = this.getHighPriorityFirst();
+      if (!taskFunc) {
+        this.checkCompletion();
         return;
       }
-      if (this.cur < this.max) {
-        this.runTask();
+      this.cur++;
+      try {
+        await taskFunc();
+      } catch (error) {
+        console.error("Task execution failed:", error);
+      } finally {
+        this.cur--;
         this.runTasks();
+      }
+    }
+    checkCompletion() {
+      if (this.pool.length === 0 && this.cur === 0) {
+        this._resolve?.(true);
+      }
+    }
+    runTasks() {
+      while (this.cur < this.max) {
+        this.runTask();
       }
     }
     async run() {
@@ -270,14 +287,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function chunks(arr, n) {
-    const res = [];
-    for (let i = 0; i < arr.length; i += n) {
-      res.push(arr.slice(i, i + n));
-    }
-    return res;
+    return Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
   }
-  function range(size, startAt = 1) {
-    return [...Array(size).keys()].map((i) => i + startAt);
+  function range(size, startAt = 1, step = 1) {
+    return Array.from({ length: size }, (_, index) => startAt + index * step);
   }
   exports2.AsyncPool = AsyncPool;
   exports2.LazyImgLoader = LazyImgLoader;
