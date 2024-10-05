@@ -1,14 +1,13 @@
 export declare class AsyncPool {
     private max;
     private pool;
-    cur: number;
+    private cur;
     private finished;
     private _resolve?;
     static doNAsyncAtOnce(max?: number, pool?: Array<AsyncPoolTask | (() => Promise<void>)>): Promise<boolean>;
     constructor(max?: number, pool?: Array<AsyncPoolTask>);
     private getHighPriorityFirst;
     private runTask;
-    private checkCompletion;
     private runTasks;
     run(): Promise<boolean>;
     push(x: AsyncPoolTask | (() => Promise<void>)): void;

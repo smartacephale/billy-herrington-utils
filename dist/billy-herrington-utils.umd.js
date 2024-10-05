@@ -253,29 +253,20 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       return this.getHighPriorityFirst(p + 1);
     }
     async runTask() {
-      const taskFunc = this.getHighPriorityFirst();
-      if (!taskFunc) {
-        this.checkCompletion();
-        return;
-      }
       this.cur++;
-      try {
-        await taskFunc();
-      } catch (error) {
-        console.error("Task execution failed:", error);
-      } finally {
-        this.cur--;
-        this.runTasks();
-      }
-    }
-    checkCompletion() {
-      if (this.pool.length === 0 && this.cur === 0) {
-        this._resolve?.(true);
-      }
+      const f = this.getHighPriorityFirst();
+      await f?.();
+      this.cur--;
+      this.runTasks();
     }
     runTasks() {
-      while (this.cur < this.max) {
+      if (!this.pool.length) {
+        this._resolve?.(true);
+        return;
+      }
+      if (this.cur < this.max) {
         this.runTask();
+        this.runTasks();
       }
     }
     async run() {
