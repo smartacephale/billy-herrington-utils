@@ -17,7 +17,7 @@ interface AsyncPoolTask {
 }
 
 export class AsyncPool {
-  cur = 0;
+  private cur = 0;
   private finished: Promise<boolean>;
   private _resolve?: (value: boolean | PromiseLike<boolean>) => void;
 
@@ -45,32 +45,21 @@ export class AsyncPool {
   }
 
   private async runTask() {
-    const taskFunc = this.getHighPriorityFirst();
-    if (!taskFunc) {
-      this.checkCompletion();
-      return;
-    }
-
     this.cur++;
-    try {
-      await taskFunc();
-    } catch (error) {
-      console.error("Task execution failed:", error);
-    } finally {
-      this.cur--;
-      this.runTasks();
-    }
-  }
-
-  private checkCompletion() {
-    if (this.pool.length === 0 && this.cur === 0) {
-      this._resolve?.(true);
-    }
+    const f = this.getHighPriorityFirst();
+    await f?.();
+    this.cur--;
+    this.runTasks();
   }
 
   private runTasks() {
-    while (this.cur < this.max) {
+    if (!this.pool.length) {
+      this._resolve?.(true);
+      return;
+    }
+    if (this.cur < this.max) {
       this.runTask();
+      this.runTasks();
     }
   }
 
