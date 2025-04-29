@@ -7,8 +7,18 @@ function stringToWords(s) {
 function sanitizeStr(s) {
   return s?.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase() || "";
 }
+function formatTimeToHHMMSS(timeString) {
+  const regex = /(?:(\d+)\s*h\s*)?(?:(\d+)\s*mi?n?\s*)?(?:(\d+)\s*sec)?/;
+  const match = timeString.match(regex);
+  const h = parseInt(match?.[1] || "0");
+  const m = parseInt(match?.[2] || "0");
+  const s = parseInt(match?.[3] || "0");
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
 function timeToSeconds(t) {
-  return (t?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
+  const r = /sec|min|h|m/.test(t) ? formatTimeToHHMMSS(t) : t;
+  return (r?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
 }
 function parseIntegerOr(n, or) {
   return ((num) => Number.isNaN(num) ? or : num)(parseInt(n));
