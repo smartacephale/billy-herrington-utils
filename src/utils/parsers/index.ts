@@ -1,5 +1,17 @@
+export function formatTimeToHHMMSS(timeString: string): string {
+  const regex: RegExp = /(?:(\d+)\s*h\s*)?(?:(\d+)\s*mi?n?\s*)?(?:(\d+)\s*sec)?/;
+  const match: RegExpMatchArray | null = timeString.match(regex);
+  const h: number = parseInt(match?.[1] || '0');
+  const m: number = parseInt(match?.[2] || '0');
+  const s: number = parseInt(match?.[3] || '0');
+  const pad = (num: number): string => String(num).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+// "01:22:03" -> 4923
 export function timeToSeconds(t: string): number {
-  return (t?.match(/\d+/gm) || [0])
+  const r = /sec|min|h|m/.test(t) ? formatTimeToHHMMSS(t) : t;
+  return (r?.match(/\d+/gm) || [0])
     .reverse()
     .map((s, i) => parseInt(s as string) * 60 ** i)
     .reduce((a, b) => a + b);
