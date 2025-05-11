@@ -57,11 +57,22 @@ export function watchElementChildrenCount(element: HTMLElement | Element,
   observer.observe(element, { childList: true });
 }
 
-export function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: () => void,
-  throttle = 1000, options: Record<string, boolean> = { childList: true, subtree: true, attributes: true }) {
+export function watchDomChangesWithThrottle(
+  element: HTMLElement | Element, 
+  callback: () => void,
+  throttle = 1000,
+  times = Infinity,
+  options: Record<string, boolean> = { childList: true, subtree: true, attributes: true }
+) {
   let lastMutationTime: number;
   let timeout: number;
+  let times_ = times;
   const observer = new MutationObserver((_mutationList, _observer) => {
+    if (times_ !== Infinity && times_ < 1) {
+      observer.disconnect();
+      return;
+    }
+    times_--;
     const now = Date.now();
     if (lastMutationTime && now - lastMutationTime < throttle) {
       timeout && clearTimeout(timeout);
@@ -70,6 +81,7 @@ export function watchDomChangesWithThrottle(element: HTMLElement | Element, call
     lastMutationTime = now;
   });
   observer.observe(element, options);
+  return observer;
 }
 
 export function downloader(options = { append: "", after: "", button: "", cbBefore: () => { } }) {
