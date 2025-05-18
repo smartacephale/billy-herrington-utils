@@ -21,7 +21,11 @@ export class Observer {
     }
   }
 
-  static observeWhile(target: Element, callback: () => Promise<boolean> | boolean, throttleTime: number) {
+  static observeWhile(
+    target: Element,
+    callback: () => Promise<boolean> | boolean,
+    throttleTime: number,
+  ) {
     const observer_ = new Observer(async (target: Element) => {
       const condition = await callback();
       if (condition) observer_.throttle(target, throttleTime);
@@ -54,5 +58,5 @@ export class LazyImgLoader {
     this.lazyImgObserver.observer.unobserve(target);
     target.src = target.getAttribute(this.attributeName) as string;
     target.removeAttribute(this.attributeName);
-  }
+  };
 }

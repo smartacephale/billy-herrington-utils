@@ -147,10 +147,16 @@ function watchElementChildrenCount(element, callback) {
   });
   observer.observe(element, { childList: true });
 }
-function watchDomChangesWithThrottle(element, callback, throttle = 1e3, options = { childList: true, subtree: true, attributes: true }) {
+function watchDomChangesWithThrottle(element, callback, throttle = 1e3, times = Infinity, options = { childList: true, subtree: true, attributes: true }) {
   let lastMutationTime;
   let timeout;
+  let times_ = times;
   const observer = new MutationObserver((_mutationList, _observer) => {
+    if (times_ !== Infinity && times_ < 1) {
+      observer.disconnect();
+      return;
+    }
+    times_--;
     const now = Date.now();
     if (lastMutationTime && now - lastMutationTime < throttle) {
       timeout && clearTimeout(timeout);
@@ -159,6 +165,7 @@ function watchDomChangesWithThrottle(element, callback, throttle = 1e3, options 
     lastMutationTime = now;
   });
   observer.observe(element, options);
+  return observer;
 }
 function downloader(options = { append: "", after: "", button: "", cbBefore: () => {
 } }) {

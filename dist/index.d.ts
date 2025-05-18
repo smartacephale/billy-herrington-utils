@@ -101,7 +101,7 @@ export declare function wait(milliseconds: number): Promise<unknown>;
 
 export declare function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: (el: Element) => void): void;
 
-export declare function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: () => void, throttle?: number, options?: Record<string, boolean>): void;
+export declare function watchDomChangesWithThrottle(element: HTMLElement | Element, callback: () => void, throttle?: number, times?: number, options?: Record<string, boolean>): MutationObserver;
 
 export declare function watchElementChildrenCount(element: HTMLElement | Element, callback: (observer: MutationObserver, count: number) => void): void;
 
