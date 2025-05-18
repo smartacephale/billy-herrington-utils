@@ -26,6 +26,36 @@ export declare function computeAsyncOneAtTime(iterable: Iterable<() => Promise<v
 
 export declare function copyAttributes(target: HTMLElement | Element, source: HTMLElement | Element): void;
 
+declare interface DataFilterState {
+    filterPublic: boolean;
+    filterPrivate: boolean;
+    filterDuration: boolean;
+    filterDurationFrom: number;
+    filterDurationTo: number;
+    filterExclude: boolean;
+    filterExcludeWords: string;
+    filterInclude: boolean;
+    filterIncludeWords: string;
+}
+
+export declare class DataManager {
+    private rules;
+    private state;
+    private data;
+    private lazyImgLoader;
+    dataFilters: {
+        [key: string]: () => FilterFunction;
+    };
+    constructor(rules: IRules, state: DataFilterState);
+    static filterDSLToRegex(str: string): RegExp[];
+    isFiltered(el: HTMLElement): boolean;
+    applyFilters: (filters: {
+        [key: string]: boolean;
+    }, offset?: number) => void;
+    filterAll: (offset?: number) => void;
+    handleLoadedHTML: (html: HTMLElement, container?: HTMLElement, removeDuplicates?: boolean, shouldLazify?: boolean) => void;
+}
+
 export declare function downloader(options?: {
     append: string;
     after: string;
@@ -33,15 +63,71 @@ export declare function downloader(options?: {
     cbBefore: () => void;
 }): void;
 
-export declare const fetchHtml: (url: string) => Promise<string | HTMLElement>;
+export declare const fetchHtml: (url: string) => Promise<HTMLElement>;
 
-export declare const fetchText: (url: string) => Promise<string | HTMLElement>;
+export declare const fetchText: (url: string) => Promise<string>;
 
 export declare function fetchWith(url: string, options?: Record<string, boolean>): Promise<string | HTMLElement>;
 
+declare type FilterFunction = (v: FilterInput) => FilterResult;
+
+declare type FilterInput = Record<string, string | number | boolean | HTMLElement>;
+
+declare interface FilterResult {
+    tag: string;
+    condition: boolean;
+}
+
 export declare function findNextSibling(el: HTMLElement | Element): Element | null;
 
+declare interface GeneratorResult {
+    url: string;
+    offset: number;
+}
+
 export declare function getAllUniqueParents(elements: HTMLCollection): Array<HTMLElement | Element>;
+
+declare interface IInfiniteScroller {
+    delay: number;
+    enabled: boolean;
+    paginationOffset: number;
+    paginationLast: number;
+    paginationElement: HTMLElement;
+    paginationUrlGenerator: (offset: number) => string;
+    handleHtmlCallback: (document: HTMLElement) => void;
+    intersectionObservable?: HTMLElement;
+    alternativeGenerator?: () => OffsetGenerator;
+}
+
+export declare class InfiniteScroller {
+    paginationGenerator: OffsetGenerator;
+    enabled: boolean;
+    delay: number;
+    paginationOffset: number;
+    paginationLast: number;
+    private handleHtmlCallback;
+    constructor({ enabled, handleHtmlCallback, delay, alternativeGenerator, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, intersectionObservable, }: IInfiniteScroller);
+    private onScrollCBs;
+    onScroll(callback: (scroller: InfiniteScroller) => void): this;
+    private _onScroll;
+    generatorConsumer: () => Promise<boolean>;
+    static createPaginationGenerator(currentPage: number, totalPages: number, generateURL: (offset: number) => string): OffsetGenerator;
+}
+
+declare interface IRules {
+    GET_THUMBS: (html: HTMLElement) => HTMLElement[];
+    THUMB_URL: (thumbElement: HTMLElement) => string;
+    THUMB_DATA: (thumbElement: HTMLElement) => {
+        title: string;
+        duration: number;
+    };
+    THUMB_IMG_DATA: (thumbElement: HTMLElement) => {
+        img: HTMLElement;
+        imgSrc: string;
+    };
+    CONTAINER: HTMLElement;
+    IS_PRIVATE: (element: HTMLElement) => boolean;
+}
 
 export declare function isMob(): boolean;
 
@@ -68,6 +154,8 @@ export declare class Observer {
     handleIntersection(entries: Iterable<IntersectionObserverEntry>): void;
     static observeWhile(target: Element, callback: () => Promise<boolean> | boolean, throttleTime: number): Observer;
 }
+
+declare type OffsetGenerator = Generator<GeneratorResult> | AsyncGenerator<GeneratorResult>;
 
 export declare function parseCSSUrl(s: string): string;
 

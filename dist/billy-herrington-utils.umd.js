@@ -300,7 +300,208 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function range(size, startAt = 1, step = 1) {
     return Array.from({ length: size }, (_, index) => startAt + index * step);
   }
+  class DataFilter {
+    constructor(rules, state) {
+      __publicField(this, "state");
+      __publicField(this, "rules");
+      __publicField(this, "filters");
+      __publicField(this, "filterPublic", () => {
+        return (v) => {
+          const isPublic = !this.rules.IS_PRIVATE(v.element);
+          return {
+            tag: "filter-public",
+            condition: this.state.filterPublic && isPublic
+          };
+        };
+      });
+      __publicField(this, "filterPrivate", () => {
+        return (v) => {
+          const isPrivate = this.rules.IS_PRIVATE(v.element);
+          return {
+            tag: "filter-private",
+            condition: this.state.filterPrivate && isPrivate
+          };
+        };
+      });
+      __publicField(this, "filterDuration", () => {
+        return (v) => {
+          const notInRange = v.duration < this.state.filterDurationFrom || v.duration > this.state.filterDurationTo;
+          return {
+            tag: "filter-duration",
+            condition: this.state.filterDuration && notInRange
+          };
+        };
+      });
+      __publicField(this, "filterExclude", () => {
+        const tags = DataManager.filterDSLToRegex(this.state.filterExcludeWords);
+        return (v) => {
+          const containTags = tags.some((tag) => tag.test(v.title));
+          return {
+            tag: "filter-exclude",
+            condition: this.state.filterExclude && containTags
+          };
+        };
+      });
+      __publicField(this, "filterInclude", () => {
+        const tags = DataManager.filterDSLToRegex(this.state.filterIncludeWords);
+        return (v) => {
+          const containTagsNot = tags.some((tag) => !tag.test(v.title));
+          return {
+            tag: "filter-include",
+            condition: this.state.filterInclude && containTagsNot
+          };
+        };
+      });
+      this.state = state;
+      this.rules = rules;
+      const methods = Object.getOwnPropertyNames(this);
+      this.filters = methods.reduce((acc, k) => {
+        if (k in this.state) {
+          acc[k] = this[k];
+          GM_addStyle(`.filter-${k.toLowerCase().slice(6)} { display: none !important; }`);
+        }
+        return acc;
+      }, {});
+    }
+  }
+  class DataManager {
+    constructor(rules, state) {
+      __publicField(this, "rules");
+      __publicField(this, "state");
+      __publicField(this, "data");
+      __publicField(this, "lazyImgLoader");
+      __publicField(this, "dataFilters");
+      __publicField(this, "applyFilters", (filters, offset = 0) => {
+        const filtersToApply = Object.keys(filters).filter((k) => Object.hasOwn(this.dataFilters, k)).map((k) => this.dataFilters[k]());
+        if (filtersToApply.length === 0) return;
+        const updates = [];
+        let offset_counter = 1;
+        for (const v of this.data.values()) {
+          if (++offset_counter > offset) {
+            for (const f of filtersToApply) {
+              const { tag, condition } = f(v);
+              updates.push(() => v.element.classList.toggle(tag, condition));
+            }
+          }
+        }
+        requestAnimationFrame(() => {
+          updates.forEach((update) => update());
+        });
+      });
+      __publicField(this, "filterAll", (offset) => {
+        const filters = Object.assign(
+          {},
+          ...Object.keys(this.dataFilters).map((f) => ({
+            [f]: this.state[f]
+          }))
+        );
+        this.applyFilters(filters, offset);
+      });
+      __publicField(this, "handleLoadedHTML", (html, container, removeDuplicates = false, shouldLazify = true) => {
+        const thumbs = this.rules.GET_THUMBS(html);
+        const data_offset = this.data.size;
+        for (const thumbElement of thumbs) {
+          const url = this.rules.THUMB_URL(thumbElement);
+          if (!url || this.data.has(url)) {
+            if (removeDuplicates) thumbElement.remove();
+            continue;
+          }
+          const { title, duration } = this.rules.THUMB_DATA(thumbElement);
+          this.data.set(url, { element: thumbElement, duration, title });
+          if (shouldLazify) {
+            const { img, imgSrc } = this.rules.THUMB_IMG_DATA(thumbElement);
+            this.lazyImgLoader.lazify(thumbElement, img, imgSrc);
+          }
+          const parent = container || this.rules.CONTAINER;
+          if (!parent.contains(thumbElement)) parent.appendChild(thumbElement);
+        }
+        this.filterAll(data_offset);
+      });
+      this.rules = rules;
+      this.state = state;
+      this.data = /* @__PURE__ */ new Map();
+      this.lazyImgLoader = new LazyImgLoader(
+        (target) => !this.isFiltered(target)
+      );
+      this.dataFilters = new DataFilter(rules, state).filters;
+    }
+    static filterDSLToRegex(str) {
+      const toFullWord = (w) => `(^|\\ )${w}($|\\ )`;
+      const str_ = str.replace(/f\:(\w+)/g, (_, w) => toFullWord(w));
+      return stringToWords(str_).map((expr) => new RegExp(expr, "i"));
+    }
+    isFiltered(el) {
+      return el.className.includes("filtered");
+    }
+  }
+  class InfiniteScroller {
+    constructor({
+      enabled,
+      handleHtmlCallback,
+      delay,
+      alternativeGenerator,
+      paginationOffset,
+      paginationLast,
+      paginationElement,
+      paginationUrlGenerator,
+      intersectionObservable
+    }) {
+      __publicField(this, "paginationGenerator");
+      __publicField(this, "enabled");
+      __publicField(this, "delay");
+      __publicField(this, "paginationOffset");
+      __publicField(this, "paginationLast");
+      __publicField(this, "handleHtmlCallback");
+      // this.stateLocale.pagIndexLast = paginationLast;
+      // this.stateLocale.pagIndexCur = paginationOffset;
+      // infiniteScrollEnabled: boolean;
+      __publicField(this, "onScrollCBs", []);
+      __publicField(this, "generatorConsumer", async () => {
+        if (!this.enabled) return false;
+        const {
+          value: { url, offset } = {},
+          done
+        } = await this.paginationGenerator.next();
+        if (!done) {
+          const nextPageHTML = await fetchHtml(url);
+          const prevScrollPos = document.documentElement.scrollTop;
+          this.paginationOffset = offset;
+          this.handleHtmlCallback(nextPageHTML);
+          this._onScroll();
+          window.scrollTo(0, prevScrollPos);
+        }
+        return !done;
+      });
+      this.enabled = enabled;
+      this.delay = delay;
+      this.paginationOffset = paginationOffset;
+      this.paginationLast = paginationLast;
+      this.handleHtmlCallback = handleHtmlCallback;
+      this.paginationGenerator = alternativeGenerator?.() ?? InfiniteScroller.createPaginationGenerator(
+        paginationOffset,
+        paginationLast,
+        paginationUrlGenerator
+      );
+      const observable = intersectionObservable || paginationElement;
+      Observer.observeWhile(observable, this.generatorConsumer, this.delay);
+    }
+    onScroll(callback) {
+      this.onScrollCBs.push(callback);
+      return this;
+    }
+    _onScroll() {
+      this.onScrollCBs.forEach((cb) => cb(this));
+    }
+    static *createPaginationGenerator(currentPage, totalPages, generateURL) {
+      for (let offset = currentPage + 1; offset <= totalPages; offset++) {
+        const url = generateURL(offset);
+        yield { url, offset };
+      }
+    }
+  }
   exports2.AsyncPool = AsyncPool;
+  exports2.DataManager = DataManager;
+  exports2.InfiniteScroller = InfiniteScroller;
   exports2.LazyImgLoader = LazyImgLoader;
   exports2.MOBILE_UA = MOBILE_UA;
   exports2.Observer = Observer;

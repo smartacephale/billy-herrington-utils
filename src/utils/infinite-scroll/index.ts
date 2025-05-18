@@ -1,34 +1,16 @@
 import { fetchHtml } from '../fetch';
 import { Observer } from '../observers';
 
-interface IURL_DATA {
-  offset: number;
-  generateURL: (offset: number) => string;
-}
-
-interface State {
-  infiniteScrollEnabled: boolean;
-}
-
-interface StateLocale {
-  pagIndexLast: number;
-  pagIndexCur: number;
-}
-
-interface Rules {
-  PAGINATION: HTMLElement;
-  PAGINATION_LAST: number;
-  INTERSECTION_OBSERVABLE?: HTMLElement;
-  URL_DATA: () => IURL_DATA;
-}
-
 interface IInfiniteScroller {
-  state: State;
-  stateLocale: StateLocale;
-  rules: Rules;
   delay: number;
+  enabled: boolean;
+  paginationOffset: number;
+  paginationLast: number;
+  paginationElement: HTMLElement;
+  paginationUrlGenerator: (offset: number) => string;
   handleHtmlCallback: (document: HTMLElement) => void;
-  alternativeGenerator: () => OffsetGenerator;
+  intersectionObservable?: HTMLElement;
+  alternativeGenerator?: () => OffsetGenerator;
 }
 
 interface GeneratorResult {
@@ -40,45 +22,58 @@ type OffsetGenerator = Generator<GeneratorResult> | AsyncGenerator<GeneratorResu
 
 export class InfiniteScroller {
   public paginationGenerator: OffsetGenerator;
-  public stateLocale: StateLocale;
-  public state: State;
-  public rules: Rules;
+  public enabled: boolean;
   public delay: number;
+  public paginationOffset: number;
+  public paginationLast: number;
   private handleHtmlCallback: (document: HTMLElement) => void;
 
   constructor({
-    state,
-    stateLocale,
-    rules,
+    enabled,
     handleHtmlCallback,
     delay,
     alternativeGenerator,
+    paginationOffset,
+    paginationLast,
+    paginationElement,
+    paginationUrlGenerator,
+    intersectionObservable,
   }: IInfiniteScroller) {
-    this.state = state;
-    this.stateLocale = stateLocale;
-    this.rules = rules;
+    this.enabled = enabled;
     this.delay = delay;
+    this.paginationOffset = paginationOffset;
+    this.paginationLast = paginationLast;
     this.handleHtmlCallback = handleHtmlCallback;
-
-    const { offset, generateURL } = rules.URL_DATA();
-
-    this.stateLocale.pagIndexLast = rules.PAGINATION_LAST;
-    this.stateLocale.pagIndexCur = offset;
 
     this.paginationGenerator =
       alternativeGenerator?.() ??
-      InfiniteScroller.createPaginationGenerator(offset, rules.PAGINATION_LAST, generateURL);
+      InfiniteScroller.createPaginationGenerator(
+        paginationOffset,
+        paginationLast,
+        paginationUrlGenerator,
+      );
 
-    this.createPaginationObserver();
-  }
-
-  createPaginationObserver() {
-    const observable = this.rules.INTERSECTION_OBSERVABLE || this.rules.PAGINATION;
+    const observable = intersectionObservable || paginationElement;
     Observer.observeWhile(observable, this.generatorConsumer, this.delay);
   }
 
+  // this.stateLocale.pagIndexLast = paginationLast;
+  // this.stateLocale.pagIndexCur = paginationOffset;
+  // infiniteScrollEnabled: boolean;
+
+  private onScrollCBs: Array<(scroller: InfiniteScroller) => void> = [];
+
+  public onScroll(callback: (scroller: InfiniteScroller) => void) {
+    this.onScrollCBs.push(callback);
+    return this;
+  }
+
+  private _onScroll() {
+    this.onScrollCBs.forEach((cb) => cb(this));
+  }
+
   generatorConsumer = async () => {
-    if (!this.state.infiniteScrollEnabled) return false;
+    if (!this.enabled) return false;
     const {
       value: { url, offset } = {},
       done,
@@ -86,8 +81,9 @@ export class InfiniteScroller {
     if (!done) {
       const nextPageHTML = await fetchHtml(url);
       const prevScrollPos = document.documentElement.scrollTop;
+      this.paginationOffset = offset;
       this.handleHtmlCallback(nextPageHTML);
-      this.stateLocale.pagIndexCur = offset;
+      this._onScroll();
       window.scrollTo(0, prevScrollPos);
     }
     return !done;
