@@ -4,6 +4,7 @@ import { Observer } from '../observers';
 interface IInfiniteScroller {
   delay: number;
   enabled: boolean;
+  writeHistory: boolean;
   paginationOffset: number;
   paginationLast: number;
   paginationElement: HTMLElement;
@@ -26,21 +27,24 @@ export class InfiniteScroller {
   public delay: number;
   public paginationOffset: number;
   public paginationLast: number;
+  public writeHistory: boolean;
   private handleHtmlCallback: (document: HTMLElement) => void;
 
   constructor({
-    enabled,
-    handleHtmlCallback,
-    delay,
-    alternativeGenerator,
+    enabled = true,
+    delay = 350,
+    writeHistory = false,
     paginationOffset,
     paginationLast,
     paginationElement,
     paginationUrlGenerator,
+    handleHtmlCallback,
+    alternativeGenerator,
     intersectionObservable,
   }: IInfiniteScroller) {
     this.enabled = enabled;
     this.delay = delay;
+    this.writeHistory = writeHistory;
     this.paginationOffset = paginationOffset;
     this.paginationLast = paginationLast;
     this.handleHtmlCallback = handleHtmlCallback;
@@ -57,13 +61,10 @@ export class InfiniteScroller {
     Observer.observeWhile(observable, this.generatorConsumer, this.delay);
   }
 
-  // this.stateLocale.pagIndexLast = paginationLast;
-  // this.stateLocale.pagIndexCur = paginationOffset;
-  // infiniteScrollEnabled: boolean;
-
   private onScrollCBs: Array<(scroller: InfiniteScroller) => void> = [];
 
-  public onScroll(callback: (scroller: InfiniteScroller) => void) {
+  public onScroll(callback: (scroller: InfiniteScroller) => void, initCall: false) {
+    if (initCall) callback(this);
     this.onScrollCBs.push(callback);
     return this;
   }
@@ -85,6 +86,9 @@ export class InfiniteScroller {
       this.handleHtmlCallback(nextPageHTML);
       this._onScroll();
       window.scrollTo(0, prevScrollPos);
+      if (this.writeHistory) {
+        history.replaceState({}, '', url);
+      }
     }
     return !done;
   };

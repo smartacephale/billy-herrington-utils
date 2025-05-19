@@ -90,6 +90,7 @@ export declare function getAllUniqueParents(elements: HTMLCollection): Array<HTM
 declare interface IInfiniteScroller {
     delay: number;
     enabled: boolean;
+    writeHistory: boolean;
     paginationOffset: number;
     paginationLast: number;
     paginationElement: HTMLElement;
@@ -105,10 +106,11 @@ export declare class InfiniteScroller {
     delay: number;
     paginationOffset: number;
     paginationLast: number;
+    writeHistory: boolean;
     private handleHtmlCallback;
-    constructor({ enabled, handleHtmlCallback, delay, alternativeGenerator, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, intersectionObservable, }: IInfiniteScroller);
+    constructor({ enabled, delay, writeHistory, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, handleHtmlCallback, alternativeGenerator, intersectionObservable, }: IInfiniteScroller);
     private onScrollCBs;
-    onScroll(callback: (scroller: InfiniteScroller) => void): this;
+    onScroll(callback: (scroller: InfiniteScroller) => void, initCall: false): this;
     private _onScroll;
     generatorConsumer: () => Promise<boolean>;
     static createPaginationGenerator(currentPage: number, totalPages: number, generateURL: (offset: number) => string): OffsetGenerator;

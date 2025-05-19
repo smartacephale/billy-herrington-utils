@@ -432,14 +432,15 @@ class DataManager {
 }
 class InfiniteScroller {
   constructor({
-    enabled,
-    handleHtmlCallback,
-    delay,
-    alternativeGenerator,
+    enabled = true,
+    delay = 350,
+    writeHistory = false,
     paginationOffset,
     paginationLast,
     paginationElement,
     paginationUrlGenerator,
+    handleHtmlCallback,
+    alternativeGenerator,
     intersectionObservable
   }) {
     __publicField(this, "paginationGenerator");
@@ -447,10 +448,8 @@ class InfiniteScroller {
     __publicField(this, "delay");
     __publicField(this, "paginationOffset");
     __publicField(this, "paginationLast");
+    __publicField(this, "writeHistory");
     __publicField(this, "handleHtmlCallback");
-    // this.stateLocale.pagIndexLast = paginationLast;
-    // this.stateLocale.pagIndexCur = paginationOffset;
-    // infiniteScrollEnabled: boolean;
     __publicField(this, "onScrollCBs", []);
     __publicField(this, "generatorConsumer", async () => {
       if (!this.enabled) return false;
@@ -465,11 +464,15 @@ class InfiniteScroller {
         this.handleHtmlCallback(nextPageHTML);
         this._onScroll();
         window.scrollTo(0, prevScrollPos);
+        if (this.writeHistory) {
+          history.replaceState({}, "", url);
+        }
       }
       return !done;
     });
     this.enabled = enabled;
     this.delay = delay;
+    this.writeHistory = writeHistory;
     this.paginationOffset = paginationOffset;
     this.paginationLast = paginationLast;
     this.handleHtmlCallback = handleHtmlCallback;
@@ -481,7 +484,8 @@ class InfiniteScroller {
     const observable = intersectionObservable || paginationElement;
     Observer.observeWhile(observable, this.generatorConsumer, this.delay);
   }
-  onScroll(callback) {
+  onScroll(callback, initCall) {
+    if (initCall) callback(this);
     this.onScrollCBs.push(callback);
     return this;
   }
