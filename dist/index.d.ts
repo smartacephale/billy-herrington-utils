@@ -26,6 +26,8 @@ export declare function computeAsyncOneAtTime(iterable: Iterable<() => Promise<v
 
 export declare function copyAttributes(target: HTMLElement | Element, source: HTMLElement | Element): void;
 
+export declare function createInfiniteScroller(store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void, rules: RulesHelper): InfiniteScroller;
+
 declare interface DataFilterState {
     filterPublic: boolean;
     filterPrivate: boolean;
@@ -90,7 +92,7 @@ export declare function getAllUniqueParents(elements: HTMLCollection): Array<HTM
 declare interface IInfiniteScroller {
     delay: number;
     enabled: boolean;
-    writeHistory: boolean;
+    writeHistory?: boolean;
     paginationOffset: number;
     paginationLast: number;
     paginationElement: HTMLElement;
@@ -110,7 +112,7 @@ export declare class InfiniteScroller {
     private handleHtmlCallback;
     constructor({ enabled, delay, writeHistory, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, handleHtmlCallback, alternativeGenerator, intersectionObservable, }: IInfiniteScroller);
     private onScrollCBs;
-    onScroll(callback: (scroller: InfiniteScroller) => void, initCall: false): this;
+    onScroll(callback: (scroller: InfiniteScroller) => void, initCall?: boolean): this;
     private _onScroll;
     generatorConsumer: () => Promise<boolean>;
     static createPaginationGenerator(currentPage: number, totalPages: number, generateURL: (offset: number) => string): OffsetGenerator;
@@ -131,7 +133,50 @@ declare interface IRules {
     IS_PRIVATE: (element: HTMLElement) => boolean;
 }
 
+export declare interface IRulesHelper {
+    delay?: number;
+    IS_VIDEO_PAGE: boolean | RegExp;
+    IS_SEARCH_PAGE: boolean | RegExp;
+    THUMB_URL: string | ((thumb: HTMLElement) => string);
+    GET_THUMBS: string | ((html: HTMLElement) => Array<HTMLElement>);
+    THUMB_DATA: {
+        title: string;
+        uploader?: string;
+        duration?: string;
+    } | ((thumb: HTMLElement) => {
+        title: string;
+        duration: number;
+    });
+    THUMB_IMG_DATA: {
+        img?: string;
+        imgSrc?: string;
+        lazyloading?: string;
+    } | ((thumb: HTMLElement) => {
+        img?: HTMLElement;
+        imgSrc?: string;
+    });
+    paginationUrlGenerator: ((offset: number) => string) | {
+        searchPage?: string;
+        pathnameLast?: boolean;
+    };
+    paginationElement: string | ((html?: HTMLElement) => HTMLElement);
+    paginationOffset: number;
+    paginationLast: number;
+    CONTAINER: string | ((html?: HTMLElement) => HTMLElement);
+    router?: (rules: RulesHelper, store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void, scroller: InfiniteScroller) => void;
+    URL_DATA?: () => {
+        paginationOffset: number;
+        paginationUrlGenerator: (offset: number) => string;
+    };
+}
+
 export declare function isMob(): boolean;
+
+declare interface JabroniStore {
+    state: Record<string, boolean | string | number>;
+    localState: Record<string, boolean | string | number>;
+    subscribe: (callback: () => void) => void;
+}
 
 export declare class LazyImgLoader {
     lazyImgObserver: Observer;
@@ -170,6 +215,37 @@ export declare function parseIntegerOr(n: string | number, or: number): number;
 export declare function range(size: number, startAt?: number, step?: number): number[];
 
 export declare function replaceElementTag(e: HTMLElement | Element, tagName: string): HTMLElement;
+
+export declare class RulesHelper {
+    private options;
+    delay: number;
+    IS_VIDEO_PAGE: boolean;
+    IS_SEARCH_PAGE: boolean;
+    paginationElement: HTMLElement;
+    paginationOffset: number;
+    paginationLast: number;
+    URL_DATA: undefined | (() => {
+        paginationOffset: number;
+        paginationUrlGenerator: (offset: number) => string;
+    });
+    constructor(options: IRulesHelper);
+    router(store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void): void;
+    paginationUrlGenerator: (offset: number) => string;
+    _IS_VIDEO_PAGE: () => boolean;
+    _IS_SEARCH_PAGE: () => boolean;
+    _paginationElement: (html?: Document) => HTMLElement;
+    CONTAINER: (html?: Document) => HTMLElement;
+    THUMB_URL: (thumb: HTMLElement) => string;
+    GET_THUMBS: (html: HTMLElement) => HTMLElement[];
+    THUMB_DATA: (thumb: HTMLElement) => {
+        title: string;
+        duration: number;
+    };
+    THUMB_IMG_DATA: (thumb: HTMLElement) => {
+        img?: HTMLElement;
+        imgSrc?: string;
+    } | undefined;
+}
 
 export declare function sanitizeStr(s: string): string;
 

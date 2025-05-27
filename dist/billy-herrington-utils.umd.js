@@ -488,7 +488,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       const observable = intersectionObservable || paginationElement;
       Observer.observeWhile(observable, this.generatorConsumer, this.delay);
     }
-    onScroll(callback, initCall) {
+    onScroll(callback, initCall = false) {
       if (initCall) callback(this);
       this.onScrollCBs.push(callback);
       return this;
@@ -503,17 +503,147 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       }
     }
   }
+  function createInfiniteScroller(store, handleHtmlCallback, rules) {
+    const enabled = store.state.infiniteScrollEnabled;
+    const iscroller = new InfiniteScroller({
+      enabled,
+      handleHtmlCallback,
+      ...rules
+    }).onScroll(({ paginationLast, paginationOffset }) => {
+      store.localState.pagIndexLast = paginationLast;
+      store.localState.pagIndexCur = paginationOffset;
+    }, true);
+    store.subscribe(() => {
+      iscroller.enabled = store.state.infiniteScrollEnabled;
+    });
+    return iscroller;
+  }
+  class RulesHelper {
+    constructor(options) {
+      __publicField(this, "delay", 250);
+      __publicField(this, "IS_VIDEO_PAGE");
+      __publicField(this, "IS_SEARCH_PAGE");
+      __publicField(this, "paginationElement");
+      __publicField(this, "paginationOffset");
+      __publicField(this, "paginationLast");
+      __publicField(this, "URL_DATA");
+      __publicField(this, "paginationUrlGenerator", (offset) => {
+        const opt = this.options.paginationUrlGenerator;
+        if (typeof opt === "function") return opt(offset);
+        const url = new URL(location.href);
+        if (opt.searchPage) {
+          url.searchParams.set(opt.searchPage, offset.toString());
+          return url.href;
+        }
+        if (opt.pathnameLast) {
+          if (url.pathname === "/") url.pathname = "/1";
+          if (/\d+$/.test(url.pathname)) {
+            url.pathname = url.pathname.replace(/\d+$/, offset.toString());
+          } else {
+            url.pathname = `${url.pathname}/${offset}`;
+          }
+          return url.href;
+        }
+        return url.href;
+      });
+      __publicField(this, "_IS_VIDEO_PAGE", () => {
+        if (typeof this.options.IS_VIDEO_PAGE === "boolean") {
+          return this.options.IS_VIDEO_PAGE;
+        }
+        return this.options.IS_VIDEO_PAGE.test(location.pathname);
+      });
+      __publicField(this, "_IS_SEARCH_PAGE", () => {
+        if (typeof this.options.IS_SEARCH_PAGE === "boolean") {
+          return this.options.IS_SEARCH_PAGE;
+        }
+        return this.options.IS_SEARCH_PAGE.test(location.pathname);
+      });
+      __publicField(this, "_paginationElement", (html = document) => {
+        if (typeof this.options.paginationElement === "function") {
+          return this.options.paginationElement(html);
+        }
+        return [...html.querySelectorAll(this.options.paginationElement)].pop();
+      });
+      __publicField(this, "CONTAINER", (html = document) => {
+        if (typeof this.options.CONTAINER === "function") {
+          return this.options.CONTAINER(html);
+        }
+        return [...html.querySelectorAll(this.options.CONTAINER)].pop();
+      });
+      __publicField(this, "THUMB_URL", (thumb) => {
+        if (typeof this.options.THUMB_URL === "string") {
+          return thumb.querySelector(this.options.THUMB_URL).href || "";
+        }
+        return this.options.THUMB_URL(thumb);
+      });
+      __publicField(this, "GET_THUMBS", (html) => {
+        if (typeof this.options.GET_THUMBS === "string") {
+          return [...html.querySelectorAll(this.options.GET_THUMBS)];
+        }
+        return this.options.GET_THUMBS(html);
+      });
+      __publicField(this, "THUMB_DATA", (thumb) => {
+        const opt = this.options.THUMB_DATA;
+        if (typeof opt === "function") return opt(thumb);
+        let title = sanitizeStr(thumb.querySelector(opt.title)?.innerText || "");
+        if (opt.uploader) {
+          const uploader = sanitizeStr(
+            thumb.querySelector(opt.title)?.innerText || ""
+          );
+          title = `${title} user:${uploader}`;
+        }
+        const duration = !opt.duration ? 0 : timeToSeconds(
+          sanitizeStr(thumb.querySelector(opt.duration)?.innerText || "")
+        );
+        return { title, duration };
+      });
+      __publicField(this, "THUMB_IMG_DATA", (thumb) => {
+        const opt = this.options.THUMB_IMG_DATA;
+        if (typeof opt === "function") return opt(thumb);
+        const result = {};
+        if (opt.img) {
+          const img = thumb.querySelector(opt.img);
+          const imgSrc = img.getAttribute(opt.imgSrc || "data-src") || img.getAttribute("src");
+          if (opt.lazyloading) {
+            img.classList.remove(opt.lazyloading);
+          }
+          Object.assign(result, { img, imgSrc });
+          if (img.complete && img.getAttribute("src") && !img.src.includes("data:image")) {
+            return {};
+          }
+        } else return {};
+      });
+      this.options = options;
+      this.delay = options?.delay || this.delay;
+      this.paginationOffset = this.options.paginationOffset;
+      this.paginationLast = this.options.paginationLast;
+      this.IS_VIDEO_PAGE = this._IS_VIDEO_PAGE();
+      this.IS_SEARCH_PAGE = this._IS_SEARCH_PAGE();
+      this.paginationElement = this._paginationElement();
+      if (options.URL_DATA) {
+        this.URL_DATA = options.URL_DATA;
+        Object.assign(this, this.URL_DATA());
+      }
+    }
+    router(store, handleHtmlCallback) {
+      if (!this.options.router) return;
+      const scroller = createInfiniteScroller(store, handleHtmlCallback, this);
+      this.options.router(this, store, handleHtmlCallback, scroller);
+    }
+  }
   exports2.AsyncPool = AsyncPool;
   exports2.DataManager = DataManager;
   exports2.InfiniteScroller = InfiniteScroller;
   exports2.LazyImgLoader = LazyImgLoader;
   exports2.MOBILE_UA = MOBILE_UA;
   exports2.Observer = Observer;
+  exports2.RulesHelper = RulesHelper;
   exports2.Tick = Tick;
   exports2.chunks = chunks;
   exports2.circularShift = circularShift;
   exports2.computeAsyncOneAtTime = computeAsyncOneAtTime;
   exports2.copyAttributes = copyAttributes;
+  exports2.createInfiniteScroller = createInfiniteScroller;
   exports2.downloader = downloader;
   exports2.fetchHtml = fetchHtml;
   exports2.fetchText = fetchText;

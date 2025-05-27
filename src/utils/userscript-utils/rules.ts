@@ -184,50 +184,57 @@ export class RulesHelper {
   };
 }
 
-const _3HENTAI_RULES = new RulesHelper({
-  IS_VIDEO_PAGE: /^\/g\/\d+/.test(location.pathname),
-  IS_SEARCH_PAGE: /^\/search\//.test(location.pathname),
-  THUMB_URL: 'a',
-  GET_THUMBS: '.doujin-col',
-  THUMB_DATA: { title: '.title' },
-  THUMB_IMG_DATA: { img: 'img', lazyloading: 'lazy' },
-  paginationUrlGenerator: { searchPage: 'page' },
-  paginationElement: '.pagination',
-  paginationOffset: 1,
-  paginationLast: Math.max(
-    ...Array.from(document.querySelectorAll('.pagination .page-link') || [], (e) =>
-      parseInt((e as HTMLElement).innerText),
-    ).filter(Number),
-    1,
-  ),
-  CONTAINER: '.listing-container',
-  URL_DATA() {
-    const IS_SEARCH_PAGE = /^\/search\//.test(location.pathname);
-    const url = new URL(window.location.href);
+// const _3HENTAI_RULES = new RulesHelper({
+//   IS_VIDEO_PAGE: /^\/g\/\d+/.test(location.pathname),
+//   IS_SEARCH_PAGE: /^\/search\//.test(location.pathname),
+//   THUMB_URL: 'a',
+//   GET_THUMBS: '.doujin-col',
+//   THUMB_DATA: { title: '.title' },
+//   THUMB_IMG_DATA: { img: 'img', lazyloading: 'lazy' },
+//   paginationUrlGenerator: { searchPage: 'page' },
+//   paginationElement: '.pagination',
+//   paginationOffset: 1,
+//   paginationLast: Math.max(
+//     ...Array.from(document.querySelectorAll('.pagination .page-link') || [], (e) =>
+//       parseInt((e as HTMLElement).innerText),
+//     ).filter(Number),
+//     1,
+//   ),
+//   CONTAINER: '.listing-container',
 
-    let paginationOffset = parseInt(url.searchParams.get('page') || "1");
-    let paginationUrlGenerator = (offset: number) => {
-      url.searchParams.set('page', offset.toString());
-      return url.href;
-    };
+// /*
+//   PARSE LINKS AND PAGINATION FOR IT!!!!
 
-    if (!IS_SEARCH_PAGE) {
-      paginationOffset = parseInt(url.pathname.match(/\d+$/)?.[0] || "1");
-      if (url.pathname === '/') url.pathname = '/1';
-      paginationUrlGenerator = (offset: number) => {
-        if (/\d+$/.test(url.pathname)) {
-          url.pathname = url.pathname.replace(/\d+$/, offset.toString());
-        } else {
-          url.pathname = `${url.pathname}/${offset}`;
-        }
-        return url.href;
-      };
-    }
+// */
 
-    return { paginationOffset, paginationUrlGenerator };
-  },
-  router: () => {},
-});
+
+//   URL_DATA() {
+//     const IS_SEARCH_PAGE = /^\/search\//.test(location.pathname);
+//     const url = new URL(window.location.href);
+
+//     let paginationOffset = parseInt(url.searchParams.get('page') || "1");
+//     let paginationUrlGenerator = (offset: number) => {
+//       url.searchParams.set('page', offset.toString());
+//       return url.href;
+//     };
+
+//     if (!IS_SEARCH_PAGE) {
+//       paginationOffset = parseInt(url.pathname.match(/\d+$/)?.[0] || "1");
+//       if (url.pathname === '/') url.pathname = '/1';
+//       paginationUrlGenerator = (offset: number) => {
+//         if (/\d+$/.test(url.pathname)) {
+//           url.pathname = url.pathname.replace(/\d+$/, offset.toString());
+//         } else {
+//           url.pathname = `${url.pathname}/${offset}`;
+//         }
+//         return url.href;
+//       };
+//     }
+
+//     return { paginationOffset, paginationUrlGenerator };
+//   },
+//   router: () => {},
+// });
 
 
 
