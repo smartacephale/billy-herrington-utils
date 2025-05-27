@@ -22,3 +22,4 @@ export { DataManager } from './data-manager';
 export { InfiniteScroller } from './utils/infinite-scroll';
 export { RulesHelper } from './utils/userscript-utils/rules';
 export type { IRulesHelper } from './utils/userscript-utils/rules';
+export { createInfiniteScroller } from './utils/jabroni-outfit-wrap';
