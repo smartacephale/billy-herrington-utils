@@ -4,7 +4,7 @@ import { Observer } from '../observers';
 interface IInfiniteScroller {
   delay: number;
   enabled: boolean;
-  writeHistory: boolean;
+  writeHistory?: boolean;
   paginationOffset: number;
   paginationLast: number;
   paginationElement: HTMLElement;
@@ -63,7 +63,7 @@ export class InfiniteScroller {
 
   private onScrollCBs: Array<(scroller: InfiniteScroller) => void> = [];
 
-  public onScroll(callback: (scroller: InfiniteScroller) => void, initCall: false) {
+  public onScroll(callback: (scroller: InfiniteScroller) => void, initCall = false) {
     if (initCall) callback(this);
     this.onScrollCBs.push(callback);
     return this;
