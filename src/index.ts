@@ -6,6 +6,7 @@ export { MOBILE_UA, fetchHtml, fetchText, fetchWith, objectToFormData } from './
 export { Tick, listenEvents } from './utils/events';
 export {
   parseDom,
+  exterminateVideo,
   copyAttributes,
   downloader,
   findNextSibling,

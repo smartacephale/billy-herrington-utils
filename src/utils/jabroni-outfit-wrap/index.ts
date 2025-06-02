@@ -12,6 +12,9 @@ export function createInfiniteScroller(
   handleHtmlCallback: (document: HTMLElement) => void,
   rules: RulesHelper,
 ) {
+  //@ts-ignore
+  if (!store.localState) store.localState = store.stateLocale;
+
   const enabled = store.state.infiniteScrollEnabled as boolean;
   const iscroller = new InfiniteScroller({
     enabled,

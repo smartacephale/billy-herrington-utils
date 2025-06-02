@@ -202,10 +202,10 @@ export class RulesHelper {
 //   ),
 //   CONTAINER: '.listing-container',
 
-// /*
-//   PARSE LINKS AND PAGINATION FOR IT!!!!
+/*
+  PARSE LINKS AND PAGINATION FOR IT!!!!
 
-// */
+*/
 
 
 //   URL_DATA() {
@@ -268,4 +268,5 @@ export class RulesHelper {
 //   ),
 //   CONTAINER: ".index-container, .container",
 //   router: () => {}
-// })
+// }}
+// 

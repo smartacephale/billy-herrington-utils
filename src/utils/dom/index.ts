@@ -100,3 +100,9 @@ export function downloader(options = { append: "", after: "", button: "", cbBefo
     });
   });
 }
+
+export function exterminateVideo(video: HTMLVideoElement) {
+  video.removeAttribute('src');
+  video.load();
+  video.remove();
+}
