@@ -31,6 +31,7 @@ export declare function createInfiniteScroller(store: JabroniStore, handleHtmlCa
 declare interface DataFilterState {
     filterPublic: boolean;
     filterPrivate: boolean;
+    filterHD: boolean;
     filterDuration: boolean;
     filterDurationFrom: number;
     filterDurationTo: number;
@@ -55,7 +56,8 @@ export declare class DataManager {
         [key: string]: boolean;
     }, offset?: number) => void;
     filterAll: (offset?: number) => void;
-    handleLoadedHTML: (html: HTMLElement, container?: HTMLElement, removeDuplicates?: boolean, shouldLazify?: boolean) => void;
+    parseData: (html: HTMLElement, container?: HTMLElement, removeDuplicates?: boolean, shouldLazify?: boolean) => void;
+    sort(propName: string): void;
 }
 
 export declare function downloader(options?: {
@@ -64,6 +66,8 @@ export declare function downloader(options?: {
     button: string;
     cbBefore: () => void;
 }): void;
+
+export declare function exterminateVideo(video: HTMLVideoElement): void;
 
 export declare const fetchHtml: (url: string) => Promise<HTMLElement>;
 
@@ -131,6 +135,7 @@ declare interface IRules {
     };
     CONTAINER: HTMLElement;
     IS_PRIVATE: (element: HTMLElement) => boolean;
+    IS_HD: (element: HTMLElement) => boolean;
 }
 
 export declare interface IRulesHelper {

@@ -4,6 +4,7 @@ import { stringToWords } from '../utils/strings';
 interface DataFilterState {
   filterPublic: boolean;
   filterPrivate: boolean;
+  filterHD: boolean;
   filterDuration: boolean;
   filterDurationFrom: number;
   filterDurationTo: number;
@@ -61,6 +62,16 @@ class DataFilter {
     };
   };
 
+  filterHD = (): FilterFunction => {
+    return (v: FilterInput) => {
+      const isHD = this.rules.IS_HD(v.element as HTMLElement);
+      return {
+        tag: 'filter-hd',
+        condition: this.state.filterHD && isHD,
+      };
+    };
+  };
+
   filterDuration = (): FilterFunction => {
     return (v: FilterInput) => {
       const notInRange =
@@ -103,6 +114,7 @@ interface IRules {
   THUMB_IMG_DATA: (thumbElement: HTMLElement) => { img: HTMLElement; imgSrc: string };
   CONTAINER: HTMLElement;
   IS_PRIVATE: (element: HTMLElement) => boolean;
+  IS_HD: (element: HTMLElement) => boolean;
 }
 
 export class DataManager {
@@ -120,6 +132,14 @@ export class DataManager {
       (target: Element) => !this.isFiltered(target as HTMLElement),
     );
     this.dataFilters = new DataFilter(rules, state).filters;
+
+    // @ts-ignore
+    [window, unsafeWindow || ({})].forEach(w => {
+      Object.assign(w, {
+        sortByViews: () => this.sort('view'),
+        sortByDuration: () => this.sort('duration'),
+      });
+    });
   }
 
   static filterDSLToRegex(str: string): RegExp[] {
@@ -165,7 +185,7 @@ export class DataManager {
     this.applyFilters(filters, offset);
   };
 
-  handleLoadedHTML = (
+  parseData = (
     html: HTMLElement,
     container?: HTMLElement,
     removeDuplicates = false,
@@ -181,8 +201,8 @@ export class DataManager {
         continue;
       }
 
-      const { title, duration } = this.rules.THUMB_DATA(thumbElement);
-      this.data.set(url, { element: thumbElement, duration, title });
+      const data = this.rules.THUMB_DATA(thumbElement);
+      this.data.set(url, { element: thumbElement, ...data });
 
       if (shouldLazify) {
         const { img, imgSrc } = this.rules.THUMB_IMG_DATA(thumbElement);
@@ -195,4 +215,20 @@ export class DataManager {
 
     this.filterAll(data_offset);
   };
+
+  sort(propName: string) {
+    if (this.data.size < 2) return;
+
+    const sorted = Array.from(this.data.keys()).sort((b, a) => {
+      return ((this.data.get(a) as FilterInput)[propName] as number) -
+        ((this.data.get(b) as FilterInput)[propName] as number);
+    });
+
+    const container = ((this.data.get(sorted[0]) as FilterInput).element as HTMLElement).parentElement as HTMLElement;
+
+    sorted.forEach(s => {
+      const e = (this.data.get(s) as FilterInput).element as HTMLElement;
+      container.append(e);
+    });
+  }
 }

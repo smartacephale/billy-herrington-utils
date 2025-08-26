@@ -184,6 +184,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       });
     });
   }
+  function exterminateVideo(video) {
+    video.removeAttribute("src");
+    video.load();
+    video.remove();
+  }
   const MOBILE_UA = [
     "Mozilla/5.0 (Linux; Android 10; K)",
     "AppleWebKit/537.36 (KHTML, like Gecko)",
@@ -323,6 +328,15 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
           };
         };
       });
+      __publicField(this, "filterHD", () => {
+        return (v) => {
+          const isHD = this.rules.IS_HD(v.element);
+          return {
+            tag: "filter-hd",
+            condition: this.state.filterHD && isHD
+          };
+        };
+      });
       __publicField(this, "filterDuration", () => {
         return (v) => {
           const notInRange = v.duration < this.state.filterDurationFrom || v.duration > this.state.filterDurationTo;
@@ -397,7 +411,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         );
         this.applyFilters(filters, offset);
       });
-      __publicField(this, "handleLoadedHTML", (html, container, removeDuplicates = false, shouldLazify = true) => {
+      __publicField(this, "parseData", (html, container, removeDuplicates = false, shouldLazify = true) => {
         const thumbs = this.rules.GET_THUMBS(html);
         const data_offset = this.data.size;
         for (const thumbElement of thumbs) {
@@ -406,8 +420,8 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
             if (removeDuplicates) thumbElement.remove();
             continue;
           }
-          const { title, duration } = this.rules.THUMB_DATA(thumbElement);
-          this.data.set(url, { element: thumbElement, duration, title });
+          const data = this.rules.THUMB_DATA(thumbElement);
+          this.data.set(url, { element: thumbElement, ...data });
           if (shouldLazify) {
             const { img, imgSrc } = this.rules.THUMB_IMG_DATA(thumbElement);
             this.lazyImgLoader.lazify(thumbElement, img, imgSrc);
@@ -424,6 +438,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         (target) => !this.isFiltered(target)
       );
       this.dataFilters = new DataFilter(rules, state).filters;
+      [window, unsafeWindow || {}].forEach((w) => {
+        Object.assign(w, {
+          sortByViews: () => this.sort("view"),
+          sortByDuration: () => this.sort("duration")
+        });
+      });
     }
     static filterDSLToRegex(str) {
       const toFullWord = (w) => `(^|\\ )${w}($|\\ )`;
@@ -432,6 +452,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
     isFiltered(el) {
       return el.className.includes("filtered");
+    }
+    sort(propName) {
+      if (this.data.size < 2) return;
+      const sorted = Array.from(this.data.keys()).sort((b, a) => {
+        return this.data.get(a)[propName] - this.data.get(b)[propName];
+      });
+      const container = this.data.get(sorted[0]).element.parentElement;
+      sorted.forEach((s) => {
+        const e = this.data.get(s).element;
+        container.append(e);
+      });
     }
   }
   class InfiniteScroller {
@@ -645,6 +676,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports2.copyAttributes = copyAttributes;
   exports2.createInfiniteScroller = createInfiniteScroller;
   exports2.downloader = downloader;
+  exports2.exterminateVideo = exterminateVideo;
   exports2.fetchHtml = fetchHtml;
   exports2.fetchText = fetchText;
   exports2.fetchWith = fetchWith;
