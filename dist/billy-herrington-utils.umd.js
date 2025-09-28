@@ -28,8 +28,9 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     return ((num) => Number.isNaN(num) ? or : num)(parseInt(n));
   }
   function parseDataParams(str) {
-    return str.split(";").reduce((acc, s) => {
-      const parsed = s.match(/([\+\w]+):(\w+)?/);
+    const paramsStr = decodeURI(str.trim()).split(";");
+    return paramsStr.reduce((acc, s) => {
+      const parsed = s.match(/([\+\w]+):([\w\-\ ]+)?/);
       if (parsed) {
         const [, key, value] = parsed;
         if (value) {
