@@ -26,36 +26,65 @@ npm i billy-herrington-utils
 
 ## **Documentation**
 
+---
+
+### General Utilities
+
 | Function | Short Explanation | Input Parameters | Example Input/Output or Usage |
 |---|---|---|---|
-| `stringToWords(s)` | Splits a string into an array of words. | `s: string` | `stringToWords("Hello, world!")` -> `["hello", "world"]` |
-| `sanitizeStr(s)` | Sanitizes a string by removing newlines, tabs, and extra spaces. | `s: string` | `sanitizeStr("Hello\nWorld\t")` -> `hello world` |
-| `timeToSeconds(timeStr)` | Converts a time string to seconds. | `timeStr: string` | `timeToSeconds("1h30m")` -> `5400` |
-| `parseIntegerOr(value, defaultValue)` | Parses a string as an integer. | `value: string`, `defaultValue: number` | `parseIntegerOr("10", 0)` -> `10`, `parseIntegerOr("abc", 0)` -> `0` |
-| `parseDataParams(str)` | Parses a string containing data parameters into an object. | `str: string` | `parseDataParams("param1:value1;param2:value2")` -> `{ param1: "value1", param2: "value2" }` |
-| `parseCSSUrl(cssUrl)` | Extracts the URL from a CSS `url()` declaration. | `cssUrl: string` | `parseCSSUrl("url('https://example.com/image.jpg')")` -> `https://example.com/image.jpg` |
-| `Observer` | A class for observing elements and triggering callbacks when they intersect with the viewport. | N/A | `const observer = new Observer((target) => { console.log(target); }); observer.observe(element);` |
-| `LazyImgLoader` | A class for lazy loading images. | N/A | `const lazyLoader = new LazyImgLoader(); lazyLoader.lazify(element, image, imageSrc);` |
-| `circularShift(value, max, shift)` | Performs a circular shift on a number. | `value: number`, `max: number = 6`, `shift: number = 1` | `circularShift(5, 10, 2)` -> `7` |
-| `parseDom(html)` | Parses HTML into a DOM element. | `html: string` | `const element = parseDom("<div>Hello</div>");` |
-| `copyAttributes(target, source)` | Copies attributes from one DOM element to another. | `target: HTMLElement`, `source: HTMLElement` | `copyAttributes(targetElement, sourceElement);` |
-| `replaceElementTag(element, tagName)` | Replaces a DOM element with a new element of a different tag. | `element: HTMLElement`, `tagName: string` | `replaceElementTag(element, "span");` |
-| `getAllUniqueParents(elements)` | Gets all unique parent elements of a list of elements. | `elements: HTMLElement[]` | `const parents = getAllUniqueParents(elements);` |
-| `findNextSibling(element)` | Finds the next sibling element of a given element. | `element: HTMLElement` | `const nextSibling = findNextSibling(element);` |
-| `waitForElementExists(parent, selector, callback)` | Waits for an element to exist within a parent element and then calls a callback. | `parent: HTMLElement`, `selector: string`, `callback: (element: HTMLElement) => void` | `waitForElementExists(container, ".target-element", (element) => { ... });` |
-| `watchElementChildrenCount(element, callback)` | Watches for changes in the number of children of an element and calls a callback. | `element: HTMLElement`, `callback: (observer: MutationObserver, count: number) => void` | `watchElementChildrenCount(element, (observer, count) => { ... });` |
-| `watchDomChangesWithThrottle(element, callback, throttle = 1e3, options = { childList: true, subtree: true, attributes: true })` | Watches for DOM changes within an element and calls a callback with throttling. | `element: HTMLElement`, `callback: (mutationList: MutationRecord[]) => void`, `throttle?: number`, `options?: MutationObserverInit` | `watchDomChangesWithThrottle(element, (mutationList) => { ... });` |
-| `downloader(options)` | Creates a download button for a video element. | `options: { button: string, append?: string, after?: string, cbBefore?: () => void }` | `downloader({ button: "#download-button" });` |
-| `MOBILE_UA` | A constant containing a mobile user agent string. | N/A | `console.log(MOBILE_UA);` |
-| `fetchWith(url, options)` | Fetches data from a URL. | `url: string`, `options: { html?: boolean, mobile?: boolean }` | `fetchWith("https://api.example.com/data", { html: true }).then((html) => { ... });` |
-| `fetchHtml(url)` | Fetches HTML from a URL. | `url: string` | `fetchHtml("https://example.com/page.html").then((html) => { ... });` |
-| `fetchText(url)` | Fetches text from a URL. | `url: string` | `fetchText("https://example.com/data.txt").then((text) => { ... });` |
-| `objectToFormData(object)` | Converts an object to FormData. | `object: object` | `const formData = objectToFormData({ name: "John", age: 30 });` |
-| `listenEvents(element, events, callback)` | Adds event listeners to a DOM element. | `element: HTMLElement`, `events: string[]`, `callback: (event: Event) => void` | `listenEvents(element, ["click", "mouseover"], (event) => { ... });` |
-| `Tick(delay, startImmediate = true)` | A class for creating interval timers. | `delay: number`, `startImmediate?: boolean` | `const tick = new Tick(1000, false); tick.start(() => { ... });` |
-| `isMob()` | Checks if the current device is a mobile device. | N/A | `if (isMob()) { ... }` |
-| `computeAsyncOneAtTime(iterable)` | Executes asynchronous functions one at a time. | `iterable: Iterable<() => Promise<any>>` | `computeAsyncOneAtTime(asyncFunctions).then((results) => { ... });` |
-| `wait(milliseconds)` | Waits for a given number of milliseconds. | `milliseconds: number` | `await wait(1000);` |
-| `AsyncPool` | A class for managing asynchronous tasks with priorities. | N/A | `const spool = new AsyncPool(); spool.push(() => { v: () => fetch(...), p: 1 });` |
-| `chunks(arr, n)` | Splits an array into chunks of a given size. | `arr: Array<any>`, `n: number` | `const chunks = chunks([1, 2, 3, 4, 5], 2);` -> `[[1, 2], [3, 4], [5]]` |
-| `range(start, end)` | Creates a range of numbers from `start` to `end` (inclusive). | `start: number`, `end: number` | `const numbers = range(1, 5);` -> `[1, 2, 3, 4, 5]` |
+| `stringToWords(s)` | Splits a comma-separated string into an array of lowercase, trimmed words. | `s: string` | `stringToWords("Hello, world!, Test_String")` -> `["hello", "world", "test_string"]` |
+| `sanitizeStr(s)` | Cleans up a string by removing newlines/tabs, excess spaces, and converting to lowercase. | `s: string` | `sanitizeStr("  Hello  \nWorld  ")` -> `"hello world"` |
+| `formatTimeToHHMMSS(timeString)` | Formats a time string (e.g., "1h 30min 15sec") into "HH:MM:SS". | `timeString: string` | `formatTimeToHHMMSS("1h 2min")` -> `"01:02:00"` |
+| `timeToSeconds(t)` | Converts a time string (e.g., "1h 30min") or "HH:MM:SS" into total seconds. | `t: string` | `timeToSeconds("1h 2min")` -> `3720` |
+| `parseIntegerOr(n, or)` | Parses a string into an integer, returning a default value if parsing fails. | `n: any`, `or: number` | `parseIntegerOr("100", 0)` -> `100`, `parseIntegerOr("abc", 0)` -> `0` |
+| `parseDataParams(str)` | Parses a string of key-value pairs (`key:value;`) into an object. | `str: string` | `parseDataParams("user:john;id:123")` -> `{user: "john", id: "123"}` |
+| `parseCSSUrl(s)` | Extracts the URL from a CSS `url()` string. | `s: string` | `parseCSSUrl("url(\"https://example.com/img.png\")")` -> `"https://example.com/img.png"` |
+| `circularShift(n, c = 6, s = 1)` | Performs a circular shift on a number within a range. | `n: number`, `c: number`, `s: number` | `circularShift(5, 6, 1)` -> `6` |
+| `range(size, startAt = 1, step = 1)` | Creates an array of numbers in a specified range. | `size: number`, `startAt: number`, `step: number` | `range(3, 2, 2)` -> `[2, 4, 6]` |
+| `chunks(arr, n)` | Splits an array into chunks of a given size. | `arr: Array`, `n: number` | `chunks([1, 2, 3, 4, 5], 2)` -> `[[1, 2], [3, 4], [5]]` |
+| `isMob()` | Checks if the user agent indicates a mobile device. | N/A | `isMob()` -> `true` or `false` |
+| `wait(milliseconds)` | Returns a Promise that resolves after a delay. | `milliseconds: number` | `await wait(1000)` waits for 1 second. |
+| `computeAsyncOneAtTime(iterable)` | Executes an iterable of async functions one at a time. | `iterable: Iterable<Function>` | `await computeAsyncOneAtTime([() => fetch('a'), () => fetch('b')])` |
+| `objectToFormData(object)` | Converts a JavaScript object into a `FormData` object. | `object: object` | `objectToFormData({ key: 'value' })` -> `FormData` object |
+
+---
+
+### DOM Manipulation
+
+| Function | Short Explanation | Input Parameters | Example Input/Output or Usage |
+|---|---|---|---|
+| `parseDom(html)` | Parses an HTML string into a DOM element. | `html: string` | `parseDom("<div>Hello</div>")` -> `HTMLDivElement` |
+| `copyAttributes(target, source)` | Copies all attributes from one element to another. | `target: HTMLElement`, `source: HTMLElement` | `copyAttributes(div1, div2)` |
+| `replaceElementTag(e, tagName)` | Replaces an element's tag while preserving its content and attributes. | `e: HTMLElement`, `tagName: string` | `replaceElementTag(document.querySelector('p'), 'div')` |
+| `getAllUniqueParents(elements)` | Returns an array of unique parent elements. | `elements: Array<HTMLElement>` | `getAllUniqueParents([el1, el2])` |
+| `findNextSibling(el)` | Finds the next sibling, or recursively checks parent elements. | `el: HTMLElement` | `findNextSibling(document.querySelector('li'))` |
+| `waitForElementExists(parent, selector, callback)` | Waits for an element to exist in the DOM and then runs a callback. | `parent: HTMLElement`, `selector: string`, `callback: Function` | `waitForElementExists(document.body, '.my-class', (el) => console.log(el))` |
+| `watchElementChildrenCount(element, callback)` | Observes an element for changes in its number of children. | `element: HTMLElement`, `callback: Function` | `watchElementChildrenCount(list, (obs, count) => console.log(count))` |
+| `watchDomChangesWithThrottle(element, callback, throttle, times, options)` | Watches for DOM changes with a throttle to prevent excessive callbacks. | `element: HTMLElement`, `callback: Function`, `throttle: number`, `times: number`, `options: object` | `watchDomChangesWithThrottle(body, () => ..., 500)` |
+| `downloader(options)` | Creates a button to download a video from the page. | `options: object` | `downloader({ button: '<button>Download</button>', append: 'body' })` |
+| `exterminateVideo(video)` | Removes a video element and stops it from loading. | `video: HTMLVideoElement` | `exterminateVideo(document.querySelector('video'))` |
+| `listenEvents(dom, events, callback)` | Adds multiple event listeners to a DOM element. | `dom: HTMLElement`, `events: Array<string>`, `callback: Function` | `listenEvents(btn, ['click', 'mouseover'], handler)` |
+
+---
+
+### Network Utilities
+
+| Function | Short Explanation | Input Parameters | Example Input/Output or Usage |
+|---|---|---|---|
+| `fetchWith(url, options)` | A flexible wrapper for the `fetch` API with options for HTML parsing and mobile user agents. | `url: string`, `options: object` | `fetchWith('https://example.com', { html: true })` |
+| `fetchHtml(url)` | Fetches a URL and parses the response as HTML. | `url: string` | `fetchHtml('https://example.com/page.html')` |
+| `fetchText(url)` | Fetches a URL and returns the response as plain text. | `url: string` | `fetchText('https://example.com/data.txt')` |
+
+---
+
+### Classes
+
+| Class | Short Explanation | Methods | Usage |
+|---|---|---|---|
+| `Observer` | A wrapper around the native `IntersectionObserver`. | `observe(target)`, `throttle(target, time)`, `static observeWhile(...)` | `const obs = new Observer(cb); obs.observe(target);` |
+| `LazyImgLoader` | Handles lazy-loading images using `IntersectionObserver`. | `lazify(_target, img, imgSrc)`, `delazify(target)` | `const loader = new LazyImgLoader(shouldLoad); loader.lazify(div, img, 'src');` |
+| `Tick` | A utility for creating timed intervals. | `start(callback, finalCallback)`, `stop()` | `const ticker = new Tick(1000); ticker.start(() => console.log('tick'), () => console.log('done'));` |
+| `AsyncPool` | Manages a pool of asynchronous tasks with a concurrency limit. | `push(task)`, `run()`, `static doNAsyncAtOnce(...)` | `const pool = new AsyncPool(2); pool.push(task1); pool.push(task2); pool.run();` |
+| `DataManager` | A class for managing, filtering, and sorting data from a webpage. | `applyFilters(filters, offset)`, `filterAll(offset)`, `parseData(html, container, ...)` | `const dm = new DataManager(rules, state); dm.parseData(html);` |
+| `InfiniteScroller` | Implements infinite scrolling by loading new content when the user reaches the end of the page. | `onScroll(callback)`, `_onScroll()` | `const iscroll = new InfiniteScroller({ ...rules });` |
+| `RulesHelper` | A helper class for defining website-specific rules. | `router(store, cb)`, `_IS_VIDEO_PAGE()`, `_IS_SEARCH_PAGE()` | `const rules = new RulesHelper(options); rules.router(store, cb);` |
