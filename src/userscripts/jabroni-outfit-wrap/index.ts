@@ -1,5 +1,5 @@
 import { InfiniteScroller } from '../infinite-scroll';
-import type { RulesHelper } from '../userscript-utils/rules';
+import type { IRules } from '../rules';
 
 export interface JabroniStore {
   state: Record<string, boolean | string | number>;
@@ -9,13 +9,23 @@ export interface JabroniStore {
 
 export function createInfiniteScroller(
   store: JabroniStore,
-  handleHtmlCallback: (document: HTMLElement) => void,
-  rules: RulesHelper,
+  parseData: (document: HTMLElement) => void,
+  rules: IRules,
 ) {
   const enabled = store.state.infiniteScrollEnabled as boolean;
+
+  const paginationOffset = rules.paginationStrategy.getPaginationOffset();
+  const paginationElement = rules.paginationStrategy.getPaginationElement();
+  const paginationLast = rules.paginationStrategy.getPaginationLast();
+  const paginationUrlGenerator = rules.paginationStrategy.getPaginationUrlGenerator();
+
   const iscroller = new InfiniteScroller({
     enabled,
-    handleHtmlCallback,
+    parseData,
+    paginationLast,
+    paginationOffset,
+    paginationElement,
+    paginationUrlGenerator,
     ...rules,
   }).onScroll(({ paginationLast, paginationOffset }) => {
     store.localState.pagIndexLast = paginationLast;

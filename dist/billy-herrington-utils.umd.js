@@ -5,46 +5,6 @@
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  function stringToWords(s) {
-    return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
-  }
-  function sanitizeStr(s) {
-    return s?.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase() || "";
-  }
-  function formatTimeToHHMMSS(timeString) {
-    const regex = /(?:(\d+)\s*h\s*)?(?:(\d+)\s*mi?n?\s*)?(?:(\d+)\s*sec)?/;
-    const match = timeString.match(regex);
-    const h = parseInt(match?.[1] || "0");
-    const m = parseInt(match?.[2] || "0");
-    const s = parseInt(match?.[3] || "0");
-    const pad = (num) => String(num).padStart(2, "0");
-    return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  }
-  function timeToSeconds(t) {
-    const r = /sec|min|h|m/.test(t) ? formatTimeToHHMMSS(t) : t;
-    return (r?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
-  }
-  function parseIntegerOr(n, or) {
-    return ((num) => Number.isNaN(num) ? or : num)(parseInt(n));
-  }
-  function parseDataParams(str) {
-    const paramsStr = decodeURI(str.trim()).split(";");
-    return paramsStr.reduce((acc, s) => {
-      const parsed = s.match(/([\+\w]+):([\w\-\ ]+)?/);
-      if (parsed) {
-        const [, key, value] = parsed;
-        if (value) {
-          key.split("+").forEach((p) => {
-            acc[p] = value;
-          });
-        }
-      }
-      return acc;
-    }, {});
-  }
-  function parseCSSUrl(s) {
-    return s.replace(/url\("|\"\).*/g, "");
-  }
   class Observer {
     constructor(callback) {
       __publicField(this, "observer");
@@ -96,8 +56,173 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.lazyImgObserver.observe(img);
     }
   }
-  function circularShift(n, c = 6, s = 1) {
-    return (n + s) % c || c;
+  function stringToWords(s) {
+    return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
+  }
+  function sanitizeStr(s) {
+    return s?.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase() || "";
+  }
+  class DataFilter {
+    constructor(rules, state) {
+      __publicField(this, "filters");
+      __publicField(this, "filterPublic", () => {
+        return (v) => {
+          const isPublic = !this.rules.isPrivate(v.element);
+          return {
+            condition: this.state.filterPublic && isPublic,
+            tag: "filter-public"
+          };
+        };
+      });
+      __publicField(this, "filterPrivate", () => {
+        return (v) => {
+          const isPrivate = this.rules.isPrivate(v.element);
+          return {
+            condition: this.state.filterPrivate && isPrivate,
+            tag: "filter-private"
+          };
+        };
+      });
+      __publicField(this, "filterHD", () => {
+        return (v) => {
+          const isHD = this.rules.isHD(v.element);
+          return {
+            condition: this.state.filterHD && isHD,
+            tag: "filter-hd"
+          };
+        };
+      });
+      __publicField(this, "filterDuration", () => {
+        return (v) => {
+          const notInRange = v.duration < this.state.filterDurationFrom || v.duration > this.state.filterDurationTo;
+          return {
+            condition: this.state.filterDuration && notInRange,
+            tag: "filter-duration"
+          };
+        };
+      });
+      __publicField(this, "filterExclude", () => {
+        const tags = DataManager.filterDSLToRegex(this.state.filterExcludeWords);
+        return (v) => {
+          const containTags = tags.some((tag) => tag.test(v.title));
+          return {
+            condition: this.state.filterExclude && containTags,
+            tag: "filter-exclude"
+          };
+        };
+      });
+      __publicField(this, "filterInclude", () => {
+        const tags = DataManager.filterDSLToRegex(this.state.filterIncludeWords);
+        return (v) => {
+          const containTagsNot = tags.some((tag) => !tag.test(v.title));
+          return {
+            condition: this.state.filterInclude && containTagsNot,
+            tag: "filter-include"
+          };
+        };
+      });
+      this.rules = rules;
+      this.state = state;
+      this.state = state;
+      const methods = Object.getOwnPropertyNames(this);
+      this.filters = methods.reduce((acc, k) => {
+        if (k in this.state) {
+          acc[k] = this[k];
+          GM_addStyle(`.filter-${k.toLowerCase().slice(6)} { display: none !important; }`);
+        }
+        return acc;
+      }, {});
+    }
+  }
+  class DataManager {
+    constructor(rules, state) {
+      __publicField(this, "rules");
+      __publicField(this, "state");
+      __publicField(this, "data");
+      __publicField(this, "lazyImgLoader");
+      __publicField(this, "dataFilters");
+      __publicField(this, "applyFilters", (filters, offset = 0) => {
+        const filtersToApply = Object.keys(filters).filter((k) => Object.hasOwn(this.dataFilters, k)).map((k) => this.dataFilters[k]());
+        if (filtersToApply.length === 0) return;
+        const updates = [];
+        let offset_counter = 1;
+        for (const v of this.data.values()) {
+          if (++offset_counter > offset) {
+            for (const f of filtersToApply) {
+              const { tag, condition } = f(v);
+              updates.push(() => v.element.classList.toggle(tag, condition));
+            }
+          }
+        }
+        requestAnimationFrame(() => {
+          updates.forEach((update) => {
+            update();
+          });
+        });
+      });
+      __publicField(this, "filterAll", (offset) => {
+        const filters = Object.assign(
+          {},
+          ...Object.keys(this.dataFilters).map((f) => ({
+            [f]: this.state[f]
+          }))
+        );
+        this.applyFilters(filters, offset);
+      });
+      __publicField(this, "parseData", (html, container, removeDuplicates = false, shouldLazify = true) => {
+        const thumbs = this.rules.getThumbs(html);
+        const data_offset = this.data.size;
+        for (const thumbElement of thumbs) {
+          const url = this.rules.getThumbUrl(thumbElement);
+          if (!url || this.data.has(url)) {
+            if (removeDuplicates) thumbElement.remove();
+            continue;
+          }
+          const data = this.rules.getThumbData(thumbElement);
+          this.data.set(url, { element: thumbElement, ...data });
+          if (shouldLazify) {
+            const { img, imgSrc } = this.rules.getThumbImgData(thumbElement);
+            this.lazyImgLoader.lazify(thumbElement, img, imgSrc);
+          }
+          const parent = container || this.rules.container;
+          if (!parent.contains(thumbElement)) parent.appendChild(thumbElement);
+        }
+        this.filterAll(data_offset);
+      });
+      this.rules = rules;
+      this.state = state;
+      this.data = /* @__PURE__ */ new Map();
+      this.lazyImgLoader = new LazyImgLoader(
+        (target) => !this.isFiltered(target)
+      );
+      this.dataFilters = new DataFilter(rules, state).filters;
+      const targets = [window, globalThis.unsafeWindow].filter(Boolean);
+      targets.forEach((w) => {
+        Object.assign(w, {
+          sortByDuration: () => this.sort("duration"),
+          sortByViews: () => this.sort("view")
+        });
+      });
+    }
+    static filterDSLToRegex(str) {
+      const toFullWord = (w) => `(^|\\ )${w}($|\\ )`;
+      const str_ = str.replace(/f:(\w+)/g, (_, w) => toFullWord(w));
+      return stringToWords(str_).map((expr) => new RegExp(expr, "i"));
+    }
+    isFiltered(el) {
+      return el.className.includes("filtered");
+    }
+    sort(propName) {
+      if (this.data.size < 2) return;
+      const sorted = Array.from(this.data.keys()).sort((b, a) => {
+        return this.data.get(a)[propName] - this.data.get(b)[propName];
+      });
+      const container = this.data.get(sorted[0]).element.parentElement;
+      sorted.forEach((s) => {
+        const e = this.data.get(s).element;
+        container.append(e);
+      });
+    }
   }
   function parseDom(html) {
     const parsed = new DOMParser().parseFromString(html, "text/html").body;
@@ -207,37 +332,336 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     Object.entries(object).forEach(([k, v]) => formData.append(k, v));
     return formData;
   }
-  function listenEvents(dom, events, callback) {
-    for (const e of events) {
-      dom.addEventListener(e, callback, true);
-    }
-  }
-  class Tick {
-    constructor(delay, startImmediate = true) {
-      __publicField(this, "tick");
-      __publicField(this, "callbackFinal");
+  class InfiniteScroller {
+    constructor({
+      enabled = true,
+      delay = 300,
+      writeHistory = false,
+      paginationOffset,
+      paginationLast,
+      paginationElement,
+      paginationUrlGenerator,
+      parseData,
+      alternativeGenerator,
+      intersectionObservable
+    }) {
+      __publicField(this, "paginationGenerator");
+      __publicField(this, "enabled");
+      __publicField(this, "delay");
+      __publicField(this, "paginationOffset");
+      __publicField(this, "paginationLast");
+      __publicField(this, "writeHistory");
+      __publicField(this, "parseData");
+      __publicField(this, "onScrollCBs", []);
+      __publicField(this, "generatorConsumer", async () => {
+        if (!this.enabled) return false;
+        const { value: { url, offset } = {}, done } = await this.paginationGenerator.next();
+        if (!done) {
+          const nextPageHTML = await fetchHtml(url);
+          const prevScrollPos = document.documentElement.scrollTop;
+          this.paginationOffset = offset;
+          this.parseData(nextPageHTML);
+          this._onScroll();
+          window.scrollTo(0, prevScrollPos);
+          if (this.writeHistory) {
+            history.replaceState({}, "", url);
+          }
+        }
+        return !done;
+      });
+      this.enabled = enabled;
       this.delay = delay;
-      this.startImmediate = startImmediate;
+      this.writeHistory = writeHistory;
+      this.paginationOffset = paginationOffset;
+      this.paginationLast = paginationLast;
+      this.parseData = parseData;
+      this.paginationGenerator = alternativeGenerator?.() ?? InfiniteScroller.createPaginationGenerator(
+        paginationOffset,
+        paginationLast,
+        paginationUrlGenerator
+      );
+      const observable = intersectionObservable || paginationElement;
+      Observer.observeWhile(observable, this.generatorConsumer, this.delay);
     }
-    start(callback, callbackFinal) {
-      this.stop();
-      this.callbackFinal = callbackFinal;
-      if (this.startImmediate) callback();
-      this.tick = window.setInterval(callback, this.delay);
+    onScroll(callback, initCall = false) {
+      if (initCall) callback(this);
+      this.onScrollCBs.push(callback);
+      return this;
     }
-    stop() {
-      if (this.tick !== void 0) {
-        clearInterval(this.tick);
-        this.tick = void 0;
-      }
-      if (this.callbackFinal) {
-        this.callbackFinal();
-        this.callbackFinal = void 0;
+    _onScroll() {
+      this.onScrollCBs.forEach((cb) => {
+        cb(this);
+      });
+    }
+    static *createPaginationGenerator(currentPage, totalPages, generateURL) {
+      for (let offset = currentPage + 1; offset <= totalPages; offset++) {
+        const url = generateURL(offset);
+        yield { url, offset };
       }
     }
   }
-  function isMob() {
-    return /iPhone|Android/i.test(navigator.userAgent);
+  function createInfiniteScroller(store, parseData, rules) {
+    const enabled = store.state.infiniteScrollEnabled;
+    const paginationOffset = rules.paginationStrategy.getPaginationOffset();
+    const paginationElement = rules.paginationStrategy.getPaginationElement();
+    const paginationLast = rules.paginationStrategy.getPaginationLast();
+    const paginationUrlGenerator = rules.paginationStrategy.getPaginationUrlGenerator();
+    const iscroller = new InfiniteScroller({
+      enabled,
+      parseData,
+      paginationLast,
+      paginationOffset,
+      paginationElement,
+      paginationUrlGenerator,
+      ...rules
+    }).onScroll(({ paginationLast: paginationLast2, paginationOffset: paginationOffset2 }) => {
+      store.localState.pagIndexLast = paginationLast2;
+      store.localState.pagIndexCur = paginationOffset2;
+    }, true);
+    store.subscribe(() => {
+      iscroller.enabled = store.state.infiniteScrollEnabled;
+    });
+    return iscroller;
+  }
+  function getPaginationLinks(doc = document, url = location.href, pathnameSelector = /\/(page\/)?\d+\/?$/) {
+    const currentUrl = parseURL(url);
+    currentUrl.pathname = currentUrl.pathname.replace(pathnameSelector, "/");
+    const pageLinks = Array.from(
+      doc.querySelectorAll("a[href]") || [],
+      (a) => a.href
+    ).filter((h) => {
+      try {
+        const linkUrl = new URL(h.replace(/#$/, ""), doc.baseURI || currentUrl.origin);
+        return linkUrl.origin === currentUrl.origin && linkUrl.pathname.startsWith(currentUrl.pathname);
+      } catch {
+        return false;
+      }
+    });
+    return pageLinks;
+  }
+  function parseURL(s) {
+    if (typeof s === "string") return new URL(s);
+    return new URL(s.href);
+  }
+  class PaginationStrategy {
+    constructor(options) {
+      __publicField(this, "doc", document);
+      __publicField(this, "url");
+      __publicField(this, "paginationSelector", ".pagination");
+      __publicField(this, "fixPaginationLast");
+      __publicField(this, "offsetMin", 1);
+      if (options) {
+        Object.entries(options).forEach(([k, v]) => {
+          Object.assign(this, { [k]: v });
+        });
+      }
+      this.url = parseURL(options?.url || this.doc.URL);
+    }
+    getPaginationElement() {
+      return this.doc.querySelector(this.paginationSelector) || this.doc;
+    }
+    getPaginationOffset() {
+      return this.offsetMin;
+    }
+    getPaginationLast() {
+      return this.offsetMin;
+    }
+    getPaginationUrlGenerator() {
+      return (_) => this.url.href;
+    }
+  }
+  function formatTimeToHHMMSS(timeString) {
+    const regex = /(?:(\d+)\s*h\s*)?(?:(\d+)\s*mi?n?\s*)?(?:(\d+)\s*sec)?/;
+    const match = timeString.match(regex);
+    const h = parseInt(match?.[1] || "0");
+    const m = parseInt(match?.[2] || "0");
+    const s = parseInt(match?.[3] || "0");
+    const pad = (num) => String(num).padStart(2, "0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+  function timeToSeconds(t) {
+    const r = /sec|min|h|m/.test(t) ? formatTimeToHHMMSS(t) : t;
+    return (r?.match(/\d+/gm) || [0]).reverse().map((s, i) => parseInt(s) * 60 ** i).reduce((a, b) => a + b);
+  }
+  function parseIntegerOr(n, or) {
+    return ((num) => Number.isNaN(num) ? or : num)(parseInt(n));
+  }
+  function parseDataParams(str) {
+    const paramsStr = decodeURI(str.trim()).split(";");
+    return paramsStr.reduce((acc, s) => {
+      const parsed = s.match(/([\+\w]+):([\w\-\ ]+)?/);
+      if (parsed) {
+        const [, key, value] = parsed;
+        if (value) {
+          key.split("+").forEach((p) => {
+            acc[p] = value;
+          });
+        }
+      }
+      return acc;
+    }, {});
+  }
+  function parseCSSUrl(s) {
+    return s.replace(/url\("|\"\).*/g, "");
+  }
+  class PaginationStrategyDataParams extends PaginationStrategy {
+    getPaginationLast() {
+      const links = this.getPaginationElement()?.querySelectorAll("[data-parameters *= from]");
+      const pages = Array.from(links || [], (l) => {
+        const p = l.getAttribute("data-parameters");
+        const v = p?.match(/from\w*:(\d+)/)?.[1] || this.offsetMin.toString();
+        return parseInt(v);
+      });
+      const lastPage = Math.max(...pages, this.offsetMin);
+      if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
+      return lastPage;
+    }
+    getPaginationOffset() {
+      const link = this.getPaginationElement()?.querySelector(
+        ".prev[data-parameters *= from], .prev [data-parameters *= from]"
+      );
+      if (!link) return this.offsetMin;
+      const p = link.getAttribute("data-parameters");
+      const v = p?.match(/from\w*:(\d+)/)?.[1] || this.offsetMin.toString();
+      return parseInt(v);
+    }
+    getPaginationUrlGenerator() {
+      const url = new URL(this.url.href);
+      const parametersElement = this.getPaginationElement()?.querySelector(
+        "a[data-block-id][data-parameters]"
+      );
+      const block_id = parametersElement?.getAttribute("data-block-id") || "";
+      const parameters = parseDataParams(parametersElement?.getAttribute("data-parameters") || "");
+      const attrs = {
+        block_id,
+        function: "get_block",
+        mode: "async",
+        ...parameters
+      };
+      Object.keys(attrs).forEach((k) => {
+        url.searchParams.set(k, attrs[k]);
+      });
+      const paginationUrlGenerator = (n) => {
+        Object.keys(attrs).forEach((k) => {
+          k.includes("from") && url.searchParams.set(k, n.toString());
+        });
+        url.searchParams.set("_", Date.now().toString());
+        return url.href;
+      };
+      return paginationUrlGenerator;
+    }
+  }
+  class PaginationStrategyPathnameParams extends PaginationStrategy {
+    constructor() {
+      super(...arguments);
+      __publicField(this, "pathnameSelector", /\/(\d+)\/?$/);
+      __publicField(this, "extractPage", (a) => {
+        const href = typeof a === "string" ? a : a.href;
+        const { pathname } = new URL(href, this.doc.baseURI || this.url.origin);
+        return parseInt(pathname.match(this.pathnameSelector)?.pop() || this.offsetMin.toString());
+      });
+    }
+    getPaginationLast() {
+      const links = getPaginationLinks(
+        this.getPaginationElement(),
+        this.url.href,
+        this.pathnameSelector
+      );
+      const pages = Array.from(links, this.extractPage);
+      const lastPage = Math.max(...pages, this.offsetMin);
+      if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
+      return lastPage;
+    }
+    getPaginationOffset() {
+      return this.extractPage(this.url.href);
+    }
+    getPaginationUrlGenerator(url_ = this.url) {
+      const url = new URL(url_.href);
+      const pathnameSelectorPlaceholder = this.pathnameSelector.toString().replace(/[/|\\|$|?|(|)]+/g, "/");
+      if (!this.pathnameSelector.test(url.pathname)) {
+        url.pathname = url.pathname.concat(pathnameSelectorPlaceholder.replace(/d\+/, this.offsetMin.toString())).replace(/\/{2,}/g, "/");
+      }
+      const paginationUrlGenerator = (offset) => {
+        url.pathname = url.pathname.replace(
+          this.pathnameSelector,
+          pathnameSelectorPlaceholder.replace(/d\+/, offset.toString())
+        );
+        return url.href;
+      };
+      return paginationUrlGenerator;
+    }
+  }
+  class PaginationStrategySearchParams extends PaginationStrategy {
+    constructor() {
+      super(...arguments);
+      __publicField(this, "searchParamSelector", "page");
+    }
+    getPaginationElement() {
+      return this.doc.querySelector(this.paginationSelector) || this.doc;
+    }
+    extractPage(a) {
+      const href = typeof a === "string" ? a : a.href;
+      const p = new URL(href).searchParams.get(this.searchParamSelector);
+      return parseInt(p) || this.offsetMin;
+    }
+    getPaginationLast() {
+      const links = getPaginationLinks(this.getPaginationElement(), this.url.href).filter(
+        (h) => /(page|p)=\d+/.test(h)
+      );
+      const pages = links.map(this.extractPage);
+      const lastPage = Math.max(...pages, this.offsetMin);
+      if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
+      return lastPage;
+    }
+    getPaginationOffset() {
+      if (this.doc === document) {
+        return this.extractPage(this.url);
+      }
+      const link = this.getPaginationElement().querySelector(
+        `a.active[href *= "${this.searchParamSelector}="]`
+      );
+      return this.extractPage(link);
+    }
+    getPaginationUrlGenerator() {
+      const url = new URL(this.url.href);
+      const paginationUrlGenerator = (offset) => {
+        url.searchParams.set(this.searchParamSelector, offset.toString());
+        return url.href;
+      };
+      return paginationUrlGenerator;
+    }
+  }
+  function getPaginationStrategy(options) {
+    const { doc = document, url = location.href } = options;
+    const pageLinks = getPaginationLinks(doc, url);
+    console.log({ pageLinks });
+    const getStrategy = () => {
+      const dataParamLinks = Array.from(document.querySelectorAll("[data-parameters *= from]"));
+      if (dataParamLinks.length > 0) {
+        console.log("PaginationStrategyDataParams", dataParamLinks);
+        return PaginationStrategyDataParams;
+      }
+      if (pageLinks.some((h) => /(page|p)=\d+/.test(h))) {
+        const l = pageLinks.filter((h) => /(page|p)=\d+/.test(h));
+        console.log("PaginationStrategySearchParams", l);
+        return PaginationStrategySearchParams;
+      }
+      if (pageLinks.some((h) => /\/(page\/)?\d+\/?$/.test(h))) {
+        const l = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h));
+        console.log("PaginationStrategyPathnameParams", l);
+        return PaginationStrategyPathnameParams;
+      }
+      console.error("Found No Strategy");
+      return PaginationStrategy;
+    };
+    const paginationStrategy = new (getStrategy())(options);
+    return paginationStrategy;
+  }
+  function chunks(arr, n) {
+    return Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+  }
+  function range(size, startAt = 1, step = 1) {
+    return Array.from({ length: size }, (_, index) => startAt + index * step);
   }
   async function computeAsyncOneAtTime(iterable) {
     const res = [];
@@ -300,368 +724,40 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       this.pool.push("p" in x ? x : { v: x, p: 0 });
     }
   }
-  function chunks(arr, n) {
-    return Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+  function isMob() {
+    return /iPhone|Android/i.test(navigator.userAgent);
   }
-  function range(size, startAt = 1, step = 1) {
-    return Array.from({ length: size }, (_, index) => startAt + index * step);
-  }
-  class DataFilter {
-    constructor(rules, state) {
-      __publicField(this, "state");
-      __publicField(this, "rules");
-      __publicField(this, "filters");
-      __publicField(this, "filterPublic", () => {
-        return (v) => {
-          const isPublic = !this.rules.IS_PRIVATE(v.element);
-          return {
-            tag: "filter-public",
-            condition: this.state.filterPublic && isPublic
-          };
-        };
-      });
-      __publicField(this, "filterPrivate", () => {
-        return (v) => {
-          const isPrivate = this.rules.IS_PRIVATE(v.element);
-          return {
-            tag: "filter-private",
-            condition: this.state.filterPrivate && isPrivate
-          };
-        };
-      });
-      __publicField(this, "filterHD", () => {
-        return (v) => {
-          const isHD = this.rules.IS_HD(v.element);
-          return {
-            tag: "filter-hd",
-            condition: this.state.filterHD && isHD
-          };
-        };
-      });
-      __publicField(this, "filterDuration", () => {
-        return (v) => {
-          const notInRange = v.duration < this.state.filterDurationFrom || v.duration > this.state.filterDurationTo;
-          return {
-            tag: "filter-duration",
-            condition: this.state.filterDuration && notInRange
-          };
-        };
-      });
-      __publicField(this, "filterExclude", () => {
-        const tags = DataManager.filterDSLToRegex(this.state.filterExcludeWords);
-        return (v) => {
-          const containTags = tags.some((tag) => tag.test(v.title));
-          return {
-            tag: "filter-exclude",
-            condition: this.state.filterExclude && containTags
-          };
-        };
-      });
-      __publicField(this, "filterInclude", () => {
-        const tags = DataManager.filterDSLToRegex(this.state.filterIncludeWords);
-        return (v) => {
-          const containTagsNot = tags.some((tag) => !tag.test(v.title));
-          return {
-            tag: "filter-include",
-            condition: this.state.filterInclude && containTagsNot
-          };
-        };
-      });
-      this.state = state;
-      this.rules = rules;
-      const methods = Object.getOwnPropertyNames(this);
-      this.filters = methods.reduce((acc, k) => {
-        if (k in this.state) {
-          acc[k] = this[k];
-          GM_addStyle(`.filter-${k.toLowerCase().slice(6)} { display: none !important; }`);
-        }
-        return acc;
-      }, {});
+  function listenEvents(dom, events, callback) {
+    for (const e of events) {
+      dom.addEventListener(e, callback, true);
     }
   }
-  class DataManager {
-    constructor(rules, state) {
-      __publicField(this, "rules");
-      __publicField(this, "state");
-      __publicField(this, "data");
-      __publicField(this, "lazyImgLoader");
-      __publicField(this, "dataFilters");
-      __publicField(this, "applyFilters", (filters, offset = 0) => {
-        const filtersToApply = Object.keys(filters).filter((k) => Object.hasOwn(this.dataFilters, k)).map((k) => this.dataFilters[k]());
-        if (filtersToApply.length === 0) return;
-        const updates = [];
-        let offset_counter = 1;
-        for (const v of this.data.values()) {
-          if (++offset_counter > offset) {
-            for (const f of filtersToApply) {
-              const { tag, condition } = f(v);
-              updates.push(() => v.element.classList.toggle(tag, condition));
-            }
-          }
-        }
-        requestAnimationFrame(() => {
-          updates.forEach((update) => update());
-        });
-      });
-      __publicField(this, "filterAll", (offset) => {
-        const filters = Object.assign(
-          {},
-          ...Object.keys(this.dataFilters).map((f) => ({
-            [f]: this.state[f]
-          }))
-        );
-        this.applyFilters(filters, offset);
-      });
-      __publicField(this, "parseData", (html, container, removeDuplicates = false, shouldLazify = true) => {
-        const thumbs = this.rules.GET_THUMBS(html);
-        const data_offset = this.data.size;
-        for (const thumbElement of thumbs) {
-          const url = this.rules.THUMB_URL(thumbElement);
-          if (!url || this.data.has(url)) {
-            if (removeDuplicates) thumbElement.remove();
-            continue;
-          }
-          const data = this.rules.THUMB_DATA(thumbElement);
-          this.data.set(url, { element: thumbElement, ...data });
-          if (shouldLazify) {
-            const { img, imgSrc } = this.rules.THUMB_IMG_DATA(thumbElement);
-            this.lazyImgLoader.lazify(thumbElement, img, imgSrc);
-          }
-          const parent = container || this.rules.CONTAINER;
-          if (!parent.contains(thumbElement)) parent.appendChild(thumbElement);
-        }
-        this.filterAll(data_offset);
-      });
-      this.rules = rules;
-      this.state = state;
-      this.data = /* @__PURE__ */ new Map();
-      this.lazyImgLoader = new LazyImgLoader(
-        (target) => !this.isFiltered(target)
-      );
-      this.dataFilters = new DataFilter(rules, state).filters;
-      [window, unsafeWindow || {}].forEach((w) => {
-        Object.assign(w, {
-          sortByViews: () => this.sort("view"),
-          sortByDuration: () => this.sort("duration")
-        });
-      });
-    }
-    static filterDSLToRegex(str) {
-      const toFullWord = (w) => `(^|\\ )${w}($|\\ )`;
-      const str_ = str.replace(/f\:(\w+)/g, (_, w) => toFullWord(w));
-      return stringToWords(str_).map((expr) => new RegExp(expr, "i"));
-    }
-    isFiltered(el) {
-      return el.className.includes("filtered");
-    }
-    sort(propName) {
-      if (this.data.size < 2) return;
-      const sorted = Array.from(this.data.keys()).sort((b, a) => {
-        return this.data.get(a)[propName] - this.data.get(b)[propName];
-      });
-      const container = this.data.get(sorted[0]).element.parentElement;
-      sorted.forEach((s) => {
-        const e = this.data.get(s).element;
-        container.append(e);
-      });
-    }
-  }
-  class InfiniteScroller {
-    constructor({
-      enabled = true,
-      delay = 350,
-      writeHistory = false,
-      paginationOffset,
-      paginationLast,
-      paginationElement,
-      paginationUrlGenerator,
-      handleHtmlCallback,
-      alternativeGenerator,
-      intersectionObservable
-    }) {
-      __publicField(this, "paginationGenerator");
-      __publicField(this, "enabled");
-      __publicField(this, "delay");
-      __publicField(this, "paginationOffset");
-      __publicField(this, "paginationLast");
-      __publicField(this, "writeHistory");
-      __publicField(this, "handleHtmlCallback");
-      __publicField(this, "onScrollCBs", []);
-      __publicField(this, "generatorConsumer", async () => {
-        if (!this.enabled) return false;
-        const {
-          value: { url, offset } = {},
-          done
-        } = await this.paginationGenerator.next();
-        if (!done) {
-          const nextPageHTML = await fetchHtml(url);
-          const prevScrollPos = document.documentElement.scrollTop;
-          this.paginationOffset = offset;
-          this.handleHtmlCallback(nextPageHTML);
-          this._onScroll();
-          window.scrollTo(0, prevScrollPos);
-          if (this.writeHistory) {
-            history.replaceState({}, "", url);
-          }
-        }
-        return !done;
-      });
-      this.enabled = enabled;
+  class Tick {
+    constructor(delay, startImmediate = true) {
+      __publicField(this, "tick");
+      __publicField(this, "callbackFinal");
       this.delay = delay;
-      this.writeHistory = writeHistory;
-      this.paginationOffset = paginationOffset;
-      this.paginationLast = paginationLast;
-      this.handleHtmlCallback = handleHtmlCallback;
-      this.paginationGenerator = alternativeGenerator?.() ?? InfiniteScroller.createPaginationGenerator(
-        paginationOffset,
-        paginationLast,
-        paginationUrlGenerator
-      );
-      const observable = intersectionObservable || paginationElement;
-      Observer.observeWhile(observable, this.generatorConsumer, this.delay);
+      this.startImmediate = startImmediate;
     }
-    onScroll(callback, initCall = false) {
-      if (initCall) callback(this);
-      this.onScrollCBs.push(callback);
-      return this;
+    start(callback, callbackFinal) {
+      this.stop();
+      this.callbackFinal = callbackFinal;
+      if (this.startImmediate) callback();
+      this.tick = window.setInterval(callback, this.delay);
     }
-    _onScroll() {
-      this.onScrollCBs.forEach((cb) => cb(this));
-    }
-    static *createPaginationGenerator(currentPage, totalPages, generateURL) {
-      for (let offset = currentPage + 1; offset <= totalPages; offset++) {
-        const url = generateURL(offset);
-        yield { url, offset };
+    stop() {
+      if (this.tick !== void 0) {
+        clearInterval(this.tick);
+        this.tick = void 0;
+      }
+      if (this.callbackFinal) {
+        this.callbackFinal();
+        this.callbackFinal = void 0;
       }
     }
   }
-  function createInfiniteScroller(store, handleHtmlCallback, rules) {
-    const enabled = store.state.infiniteScrollEnabled;
-    const iscroller = new InfiniteScroller({
-      enabled,
-      handleHtmlCallback,
-      ...rules
-    }).onScroll(({ paginationLast, paginationOffset }) => {
-      store.localState.pagIndexLast = paginationLast;
-      store.localState.pagIndexCur = paginationOffset;
-    }, true);
-    store.subscribe(() => {
-      iscroller.enabled = store.state.infiniteScrollEnabled;
-    });
-    return iscroller;
-  }
-  class RulesHelper {
-    constructor(options) {
-      __publicField(this, "delay", 250);
-      __publicField(this, "IS_VIDEO_PAGE");
-      __publicField(this, "IS_SEARCH_PAGE");
-      __publicField(this, "paginationElement");
-      __publicField(this, "paginationOffset");
-      __publicField(this, "paginationLast");
-      __publicField(this, "URL_DATA");
-      __publicField(this, "paginationUrlGenerator", (offset) => {
-        const opt = this.options.paginationUrlGenerator;
-        if (typeof opt === "function") return opt(offset);
-        const url = new URL(location.href);
-        if (opt.searchPage) {
-          url.searchParams.set(opt.searchPage, offset.toString());
-          return url.href;
-        }
-        if (opt.pathnameLast) {
-          if (url.pathname === "/") url.pathname = "/1";
-          if (/\d+$/.test(url.pathname)) {
-            url.pathname = url.pathname.replace(/\d+$/, offset.toString());
-          } else {
-            url.pathname = `${url.pathname}/${offset}`;
-          }
-          return url.href;
-        }
-        return url.href;
-      });
-      __publicField(this, "_IS_VIDEO_PAGE", () => {
-        if (typeof this.options.IS_VIDEO_PAGE === "boolean") {
-          return this.options.IS_VIDEO_PAGE;
-        }
-        return this.options.IS_VIDEO_PAGE.test(location.pathname);
-      });
-      __publicField(this, "_IS_SEARCH_PAGE", () => {
-        if (typeof this.options.IS_SEARCH_PAGE === "boolean") {
-          return this.options.IS_SEARCH_PAGE;
-        }
-        return this.options.IS_SEARCH_PAGE.test(location.pathname);
-      });
-      __publicField(this, "_paginationElement", (html = document) => {
-        if (typeof this.options.paginationElement === "function") {
-          return this.options.paginationElement(html);
-        }
-        return [...html.querySelectorAll(this.options.paginationElement)].pop();
-      });
-      __publicField(this, "CONTAINER", (html = document) => {
-        if (typeof this.options.CONTAINER === "function") {
-          return this.options.CONTAINER(html);
-        }
-        return [...html.querySelectorAll(this.options.CONTAINER)].pop();
-      });
-      __publicField(this, "THUMB_URL", (thumb) => {
-        if (typeof this.options.THUMB_URL === "string") {
-          return thumb.querySelector(this.options.THUMB_URL).href || "";
-        }
-        return this.options.THUMB_URL(thumb);
-      });
-      __publicField(this, "GET_THUMBS", (html) => {
-        if (typeof this.options.GET_THUMBS === "string") {
-          return [...html.querySelectorAll(this.options.GET_THUMBS)];
-        }
-        return this.options.GET_THUMBS(html);
-      });
-      __publicField(this, "THUMB_DATA", (thumb) => {
-        const opt = this.options.THUMB_DATA;
-        if (typeof opt === "function") return opt(thumb);
-        let title = sanitizeStr(thumb.querySelector(opt.title)?.innerText || "");
-        if (opt.uploader) {
-          const uploader = sanitizeStr(
-            thumb.querySelector(opt.title)?.innerText || ""
-          );
-          title = `${title} user:${uploader}`;
-        }
-        const duration = !opt.duration ? 0 : timeToSeconds(
-          sanitizeStr(thumb.querySelector(opt.duration)?.innerText || "")
-        );
-        return { title, duration };
-      });
-      __publicField(this, "THUMB_IMG_DATA", (thumb) => {
-        const opt = this.options.THUMB_IMG_DATA;
-        if (typeof opt === "function") return opt(thumb);
-        const result = {};
-        if (opt.img) {
-          const img = thumb.querySelector(opt.img);
-          const imgSrc = img.getAttribute(opt.imgSrc || "data-src") || img.getAttribute("src");
-          if (opt.lazyloading) {
-            img.classList.remove(opt.lazyloading);
-          }
-          Object.assign(result, { img, imgSrc });
-          if (img.complete && img.getAttribute("src") && !img.src.includes("data:image")) {
-            return {};
-          }
-        } else return {};
-      });
-      this.options = options;
-      this.delay = options?.delay || this.delay;
-      this.paginationOffset = this.options.paginationOffset;
-      this.paginationLast = this.options.paginationLast;
-      this.IS_VIDEO_PAGE = this._IS_VIDEO_PAGE();
-      this.IS_SEARCH_PAGE = this._IS_SEARCH_PAGE();
-      this.paginationElement = this._paginationElement();
-      if (options.URL_DATA) {
-        this.URL_DATA = options.URL_DATA;
-        Object.assign(this, this.URL_DATA());
-      }
-    }
-    router(store, handleHtmlCallback) {
-      if (!this.options.router) return;
-      const scroller = createInfiniteScroller(store, handleHtmlCallback, this);
-      this.options.router(this, store, handleHtmlCallback, scroller);
-    }
+  function circularShift(n, c = 6, s = 1) {
+    return (n + s) % c || c;
   }
   exports2.AsyncPool = AsyncPool;
   exports2.DataManager = DataManager;
@@ -669,7 +765,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports2.LazyImgLoader = LazyImgLoader;
   exports2.MOBILE_UA = MOBILE_UA;
   exports2.Observer = Observer;
-  exports2.RulesHelper = RulesHelper;
+  exports2.PaginationStrategy = PaginationStrategy;
+  exports2.PaginationStrategyDataParams = PaginationStrategyDataParams;
+  exports2.PaginationStrategyPathnameParams = PaginationStrategyPathnameParams;
+  exports2.PaginationStrategySearchParams = PaginationStrategySearchParams;
   exports2.Tick = Tick;
   exports2.chunks = chunks;
   exports2.circularShift = circularShift;
@@ -683,6 +782,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   exports2.fetchWith = fetchWith;
   exports2.findNextSibling = findNextSibling;
   exports2.getAllUniqueParents = getAllUniqueParents;
+  exports2.getPaginationStrategy = getPaginationStrategy;
   exports2.isMob = isMob;
   exports2.listenEvents = listenEvents;
   exports2.objectToFormData = objectToFormData;

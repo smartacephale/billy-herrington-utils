@@ -26,7 +26,7 @@ export declare function computeAsyncOneAtTime(iterable: Iterable<() => Promise<v
 
 export declare function copyAttributes(target: HTMLElement | Element, source: HTMLElement | Element): void;
 
-export declare function createInfiniteScroller(store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void, rules: RulesHelper): InfiniteScroller;
+export declare function createInfiniteScroller(store: JabroniStore, parseData: (document: HTMLElement) => void, rules: IRules_2): InfiniteScroller;
 
 declare interface DataFilterState {
     filterPublic: boolean;
@@ -93,15 +93,17 @@ declare interface GeneratorResult {
 
 export declare function getAllUniqueParents(elements: HTMLCollection): Array<HTMLElement | Element>;
 
+export declare function getPaginationStrategy(options: IPaginationStrategy): PaginationStrategy;
+
 declare interface IInfiniteScroller {
-    delay: number;
-    enabled: boolean;
+    delay?: number;
+    enabled?: boolean;
     writeHistory?: boolean;
     paginationOffset: number;
     paginationLast: number;
     paginationElement: HTMLElement;
     paginationUrlGenerator: (offset: number) => string;
-    handleHtmlCallback: (document: HTMLElement) => void;
+    parseData: (document: HTMLElement) => void;
     intersectionObservable?: HTMLElement;
     alternativeGenerator?: () => OffsetGenerator;
 }
@@ -113,8 +115,8 @@ export declare class InfiniteScroller {
     paginationOffset: number;
     paginationLast: number;
     writeHistory: boolean;
-    private handleHtmlCallback;
-    constructor({ enabled, delay, writeHistory, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, handleHtmlCallback, alternativeGenerator, intersectionObservable, }: IInfiniteScroller);
+    private parseData;
+    constructor({ enabled, delay, writeHistory, paginationOffset, paginationLast, paginationElement, paginationUrlGenerator, parseData, alternativeGenerator, intersectionObservable, }: IInfiniteScroller);
     private onScrollCBs;
     onScroll(callback: (scroller: InfiniteScroller) => void, initCall?: boolean): this;
     private _onScroll;
@@ -122,57 +124,35 @@ export declare class InfiniteScroller {
     static createPaginationGenerator(currentPage: number, totalPages: number, generateURL: (offset: number) => string): OffsetGenerator;
 }
 
+declare interface IPaginationStrategy {
+    url?: URL | Location | string;
+    doc?: Document | HTMLElement;
+    paginationSelector?: string;
+    fixPaginationLast?: (n: number, offset?: number) => number;
+    pathnameSelector?: RegExp;
+    searchParamSelector?: string;
+    offsetMin?: number;
+}
+
 declare interface IRules {
-    GET_THUMBS: (html: HTMLElement) => HTMLElement[];
-    THUMB_URL: (thumbElement: HTMLElement) => string;
-    THUMB_DATA: (thumbElement: HTMLElement) => {
+    getThumbs: (html: HTMLElement) => HTMLElement[];
+    getThumbUrl: (thumbElement: HTMLElement) => string;
+    getThumbData: (thumbElement: HTMLElement) => {
         title: string;
         duration: number;
     };
-    THUMB_IMG_DATA: (thumbElement: HTMLElement) => {
+    getThumbImgData: (thumbElement: HTMLElement) => {
         img: HTMLElement;
         imgSrc: string;
     };
-    CONTAINER: HTMLElement;
-    IS_PRIVATE: (element: HTMLElement) => boolean;
-    IS_HD: (element: HTMLElement) => boolean;
+    container: HTMLElement;
+    isPrivate: (element: HTMLElement) => boolean;
+    isHD: (element: HTMLElement) => boolean;
 }
 
-export declare interface IRulesHelper {
+declare interface IRules_2 {
+    paginationStrategy: PaginationStrategy;
     delay?: number;
-    IS_VIDEO_PAGE: boolean | RegExp;
-    IS_SEARCH_PAGE: boolean | RegExp;
-    THUMB_URL: string | ((thumb: HTMLElement) => string);
-    GET_THUMBS: string | ((html: HTMLElement) => Array<HTMLElement>);
-    THUMB_DATA: {
-        title: string;
-        uploader?: string;
-        duration?: string;
-    } | ((thumb: HTMLElement) => {
-        title: string;
-        duration: number;
-    });
-    THUMB_IMG_DATA: {
-        img?: string;
-        imgSrc?: string;
-        lazyloading?: string;
-    } | ((thumb: HTMLElement) => {
-        img?: HTMLElement;
-        imgSrc?: string;
-    });
-    paginationUrlGenerator: ((offset: number) => string) | {
-        searchPage?: string;
-        pathnameLast?: boolean;
-    };
-    paginationElement: string | ((html?: HTMLElement) => HTMLElement);
-    paginationOffset: number;
-    paginationLast: number;
-    CONTAINER: string | ((html?: HTMLElement) => HTMLElement);
-    router?: (rules: RulesHelper, store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void, scroller: InfiniteScroller) => void;
-    URL_DATA?: () => {
-        paginationOffset: number;
-        paginationUrlGenerator: (offset: number) => string;
-    };
 }
 
 export declare function isMob(): boolean;
@@ -209,6 +189,42 @@ export declare class Observer {
 
 declare type OffsetGenerator = Generator<GeneratorResult> | AsyncGenerator<GeneratorResult>;
 
+export declare class PaginationStrategy {
+    doc: Document;
+    url: URL;
+    paginationSelector: string;
+    fixPaginationLast?: (n: number, offset?: number) => number;
+    offsetMin: number;
+    constructor(options?: IPaginationStrategy);
+    getPaginationElement(): HTMLElement;
+    getPaginationOffset(): number;
+    getPaginationLast(): number;
+    getPaginationUrlGenerator(): (_: number) => string;
+}
+
+export declare class PaginationStrategyDataParams extends PaginationStrategy {
+    getPaginationLast(): number;
+    getPaginationOffset(): number;
+    getPaginationUrlGenerator(): (n: number) => string;
+}
+
+export declare class PaginationStrategyPathnameParams extends PaginationStrategy {
+    pathnameSelector: RegExp;
+    extractPage: (a: HTMLAnchorElement | Location | string) => number;
+    getPaginationLast(): number;
+    getPaginationOffset(): number;
+    getPaginationUrlGenerator(url_?: URL): (offset: number) => string;
+}
+
+export declare class PaginationStrategySearchParams extends PaginationStrategy {
+    searchParamSelector: string;
+    getPaginationElement(): HTMLElement;
+    extractPage(a: HTMLAnchorElement | Location | URL | string): number;
+    getPaginationLast(): number;
+    getPaginationOffset(): number;
+    getPaginationUrlGenerator(): (offset: number) => string;
+}
+
 export declare function parseCSSUrl(s: string): string;
 
 export declare function parseDataParams(str: string): Record<string, string>;
@@ -220,37 +236,6 @@ export declare function parseIntegerOr(n: string | number, or: number): number;
 export declare function range(size: number, startAt?: number, step?: number): number[];
 
 export declare function replaceElementTag(e: HTMLElement | Element, tagName: string): HTMLElement;
-
-export declare class RulesHelper {
-    private options;
-    delay: number;
-    IS_VIDEO_PAGE: boolean;
-    IS_SEARCH_PAGE: boolean;
-    paginationElement: HTMLElement;
-    paginationOffset: number;
-    paginationLast: number;
-    URL_DATA: undefined | (() => {
-        paginationOffset: number;
-        paginationUrlGenerator: (offset: number) => string;
-    });
-    constructor(options: IRulesHelper);
-    router(store: JabroniStore, handleHtmlCallback: (document: HTMLElement) => void): void;
-    paginationUrlGenerator: (offset: number) => string;
-    _IS_VIDEO_PAGE: () => boolean;
-    _IS_SEARCH_PAGE: () => boolean;
-    _paginationElement: (html?: Document) => HTMLElement;
-    CONTAINER: (html?: Document) => HTMLElement;
-    THUMB_URL: (thumb: HTMLElement) => string;
-    GET_THUMBS: (html: HTMLElement) => HTMLElement[];
-    THUMB_DATA: (thumb: HTMLElement) => {
-        title: string;
-        duration: number;
-    };
-    THUMB_IMG_DATA: (thumb: HTMLElement) => {
-        img?: HTMLElement;
-        imgSrc?: string;
-    } | undefined;
-}
 
 export declare function sanitizeStr(s: string): string;
 

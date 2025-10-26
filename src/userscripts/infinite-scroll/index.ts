@@ -1,15 +1,15 @@
-import { fetchHtml } from '../fetch';
-import { Observer } from '../observers';
+import { fetchHtml } from '../../utils/fetch';
+import { Observer } from '../../utils/observers';
 
 interface IInfiniteScroller {
-  delay: number;
-  enabled: boolean;
+  delay?: number;
+  enabled?: boolean;
   writeHistory?: boolean;
   paginationOffset: number;
   paginationLast: number;
   paginationElement: HTMLElement;
   paginationUrlGenerator: (offset: number) => string;
-  handleHtmlCallback: (document: HTMLElement) => void;
+  parseData: (document: HTMLElement) => void;
   intersectionObservable?: HTMLElement;
   alternativeGenerator?: () => OffsetGenerator;
 }
@@ -28,17 +28,17 @@ export class InfiniteScroller {
   public paginationOffset: number;
   public paginationLast: number;
   public writeHistory: boolean;
-  private handleHtmlCallback: (document: HTMLElement) => void;
+  private parseData: (document: HTMLElement) => void;
 
   constructor({
     enabled = true,
-    delay = 350,
+    delay = 300,
     writeHistory = false,
     paginationOffset,
     paginationLast,
     paginationElement,
     paginationUrlGenerator,
-    handleHtmlCallback,
+    parseData,
     alternativeGenerator,
     intersectionObservable,
   }: IInfiniteScroller) {
@@ -47,7 +47,7 @@ export class InfiniteScroller {
     this.writeHistory = writeHistory;
     this.paginationOffset = paginationOffset;
     this.paginationLast = paginationLast;
-    this.handleHtmlCallback = handleHtmlCallback;
+    this.parseData = parseData;
 
     this.paginationGenerator =
       alternativeGenerator?.() ??
@@ -70,20 +70,19 @@ export class InfiniteScroller {
   }
 
   private _onScroll() {
-    this.onScrollCBs.forEach((cb) => cb(this));
+    this.onScrollCBs.forEach((cb) => {
+      cb(this);
+    });
   }
 
   generatorConsumer = async () => {
     if (!this.enabled) return false;
-    const {
-      value: { url, offset } = {},
-      done,
-    } = await this.paginationGenerator.next();
+    const { value: { url, offset } = {}, done } = await this.paginationGenerator.next();
     if (!done) {
       const nextPageHTML = await fetchHtml(url);
       const prevScrollPos = document.documentElement.scrollTop;
       this.paginationOffset = offset;
-      this.handleHtmlCallback(nextPageHTML);
+      this.parseData(nextPageHTML);
       this._onScroll();
       window.scrollTo(0, prevScrollPos);
       if (this.writeHistory) {

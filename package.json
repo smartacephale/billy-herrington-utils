@@ -1,9 +1,16 @@
 {
   "name": "billy-herrington-utils",
   "description": "daddy told us not to be ashamed of our utils",
-  "version": "1.4.3",
+  "version": "1.4.9",
   "license": "MIT",
-  "keywords": ["utils", "observer", "dom", "fetch", "arrays", "typescript"],
+  "keywords": [
+    "utils",
+    "observer",
+    "dom",
+    "fetch",
+    "arrays",
+    "typescript"
+  ],
   "author": "smartacephale atm.mormon@protonmail.com (https://github.com/smartacephale)",
   "homepage": "https://github.com/smartacephale/billy-herrington-utils#readme",
   "type": "module",
@@ -24,7 +31,10 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["src/**/*", "dist/**/*"],
+  "files": [
+    "src/**/*",
+    "dist/**/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

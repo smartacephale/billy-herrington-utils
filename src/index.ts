@@ -1,26 +1,31 @@
-export { stringToWords, sanitizeStr } from './utils/strings';
-export { timeToSeconds, parseCSSUrl, parseDataParams, parseIntegerOr } from './utils/parsers';
-export { Observer, LazyImgLoader } from './utils/observers';
-export { circularShift } from './utils/math';
-export { MOBILE_UA, fetchHtml, fetchText, fetchWith, objectToFormData } from './utils/fetch';
-export { Tick, listenEvents } from './utils/events';
+export { DataManager } from './userscripts/data-manager';
+export { InfiniteScroller } from './userscripts/infinite-scroll';
+export { createInfiniteScroller } from './userscripts/jabroni-outfit-wrap';
+export { getPaginationStrategy } from './userscripts/pagination-parsing';
 export {
-  parseDom,
-  exterminateVideo,
+  PaginationStrategy,
+  PaginationStrategyDataParams,
+  PaginationStrategyPathnameParams,
+  PaginationStrategySearchParams,
+} from './userscripts/pagination-parsing/pagination-strategies';
+export { chunks, range } from './utils/arrays';
+export { AsyncPool, computeAsyncOneAtTime, wait } from './utils/async';
+export { isMob } from './utils/device';
+export {
   copyAttributes,
   downloader,
+  exterminateVideo,
   findNextSibling,
   getAllUniqueParents,
+  parseDom,
   replaceElementTag,
   waitForElementExists,
   watchDomChangesWithThrottle,
   watchElementChildrenCount,
 } from './utils/dom';
-export { isMob } from './utils/device';
-export { computeAsyncOneAtTime, AsyncPool, wait } from './utils/async';
-export { chunks, range } from './utils/arrays';
-export { DataManager } from './data-manager';
-export { InfiniteScroller } from './utils/infinite-scroll';
-export { RulesHelper } from './utils/userscript-utils/rules';
-export type { IRulesHelper } from './utils/userscript-utils/rules';
-export { createInfiniteScroller } from './utils/jabroni-outfit-wrap';
+export { listenEvents, Tick } from './utils/events';
+export { fetchHtml, fetchText, fetchWith, MOBILE_UA, objectToFormData } from './utils/fetch';
+export { circularShift } from './utils/math';
+export { LazyImgLoader, Observer } from './utils/observers';
+export { parseCSSUrl, parseDataParams, parseIntegerOr, timeToSeconds } from './utils/parsers';
+export { sanitizeStr, stringToWords } from './utils/strings';
