@@ -9,9 +9,9 @@ import { getPaginationLinks } from './pagination-utils';
 
 export function getPaginationStrategy(options: IPaginationStrategy) {
   const { doc = document, url = location.href } = options;
-  const pageLinks = getPaginationLinks(doc, url);
+  const pageLinks = getPaginationLinks(doc, url).map((l) => new URL(l));
 
-  console.log({ pageLinks });
+  console.log({ pageLinks: pageLinks.map((l) => l.href) });
 
   const getStrategy = (): typeof PaginationStrategy => {
     const dataParamLinks = Array.from(document.querySelectorAll('[data-parameters *= from]'));
@@ -20,14 +20,14 @@ export function getPaginationStrategy(options: IPaginationStrategy) {
       return PaginationStrategyDataParams;
     }
 
-    if (pageLinks.some((h) => /(page|p)=\d+/.test(h))) {
-      const l = pageLinks.filter((h) => /(page|p)=\d+/.test(h));
+    if (pageLinks.some((h) => /(page|p)=\d+/.test(h.search))) {
+      const l = pageLinks.filter((h) => /(page|p)=\d+/.test(h.search)).map((h) => h.href);
       console.log('PaginationStrategySearchParams', l);
       return PaginationStrategySearchParams;
     }
 
-    if (pageLinks.some((h) => /\/(page\/)?\d+\/?$/.test(h))) {
-      const l = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h));
+    if (pageLinks.some((h) => /\/(page\/)?\d+\/?$/.test(h.pathname))) {
+      const l = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h.pathname)).map((h) => h.href);
       console.log('PaginationStrategyPathnameParams', l);
       return PaginationStrategyPathnameParams;
     }
@@ -40,12 +40,3 @@ export function getPaginationStrategy(options: IPaginationStrategy) {
 
   return paginationStrategy;
 }
-
-// const p = new PaginationStrategyPathnameParams();
-
-// console.table({
-//   pagination: `class:${p.getPaginationElement().className} + id:${p.getPaginationElement().id}`,
-//   last: p.getPaginationLast(),
-//   offset: p.getPaginationOffset(),
-//   generator: p.getPaginationUrlGenerator()(1488),
-// });
