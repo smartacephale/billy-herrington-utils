@@ -431,7 +431,7 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
       (a) => a.href
     ).filter((h) => {
       try {
-        const linkUrl = new URL(h.replace(/#$/, ""), doc.baseURI || currentUrl.origin);
+        const linkUrl = new URL(h.replace(/#\w*$/, ""), doc.baseURI || currentUrl.origin);
         return linkUrl.origin === currentUrl.origin && linkUrl.pathname.startsWith(currentUrl.pathname);
       } catch {
         return false;
@@ -442,6 +442,17 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function parseURL(s) {
     if (typeof s === "string") return new URL(s);
     return new URL(s.href);
+  }
+  function upgradePathname(curr, links) {
+    if (/\/(page\/)?\d+\/?$/.test(curr.pathname) || links.length < 1) return curr;
+    const linksDepaginated = links.map((l) => {
+      l.pathname = l.pathname.replace(/\/(page\/)?\d+\/?$/, "/");
+      return l;
+    });
+    if (linksDepaginated.some((l) => l.pathname === curr.pathname)) return curr;
+    const last = linksDepaginated.at(-1);
+    if (last.pathname !== curr.pathname) curr.pathname = last.pathname;
+    return curr;
   }
   class PaginationStrategy {
     constructor(options) {
@@ -635,6 +646,10 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
   function getPaginationStrategy(options) {
     const { doc = document, url = location.href, paginationSelector = ".pagination" } = options;
     const pagination = doc.querySelector(paginationSelector);
+    if (!pagination) {
+      console.error("Found No Pagination");
+      return new PaginationStrategy(options);
+    }
     const pageLinks = getPaginationLinks(pagination, url).map((l) => new URL(l));
     console.log({ pageLinks: pageLinks.map((l) => l.href) });
     const getStrategy = () => {
@@ -649,14 +664,19 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
         return PaginationStrategySearchParams;
       }
       if (pageLinks.some((h) => /\/(page\/)?\d+\/?$/.test(h.pathname))) {
-        const l = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h.pathname)).map((h) => h.href);
-        console.log("PaginationStrategyPathnameParams", l);
+        const pathnameMatched = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h.pathname));
+        console.log(
+          "PaginationStrategyPathnameParams",
+          pathnameMatched.map((h) => h.href)
+        );
+        options.url = upgradePathname(parseURL(url), pathnameMatched);
         return PaginationStrategyPathnameParams;
       }
       console.error("Found No Strategy");
       return PaginationStrategy;
     };
     const paginationStrategy = new (getStrategy())(options);
+    console.log("paginationStrategy", paginationStrategy);
     return paginationStrategy;
   }
   function chunks(arr, n) {

@@ -1,5 +1,5 @@
 export function getPaginationLinks(
-  doc: HTMLElement | Document = document,
+  doc: Element | HTMLElement | Document = document,
   url: Location | URL | string = location.href,
   pathnameSelector = /\/(page\/)?\d+\/?$/,
 ): string[] {
@@ -10,7 +10,7 @@ export function getPaginationLinks(
     (a) => a.href,
   ).filter((h) => {
     try {
-      const linkUrl = new URL(h.replace(/#$/, ''), doc.baseURI || currentUrl.origin);
+      const linkUrl = new URL(h.replace(/#\w*$/, ''), doc.baseURI || currentUrl.origin);
       return (
         linkUrl.origin === currentUrl.origin && linkUrl.pathname.startsWith(currentUrl.pathname)
       );
@@ -24,4 +24,17 @@ export function getPaginationLinks(
 export function parseURL(s: HTMLAnchorElement | Location | URL | string): URL {
   if (typeof s === 'string') return new URL(s);
   return new URL(s.href);
+}
+
+export function upgradePathname(curr: URL, links: URL[]): URL {
+  // curr: website.com, links: [webiste.com/new/23], res: wegsite.com/new
+  if (/\/(page\/)?\d+\/?$/.test(curr.pathname) || links.length < 1) return curr;
+  const linksDepaginated = links.map((l) => {
+    l.pathname = l.pathname.replace(/\/(page\/)?\d+\/?$/, '/');
+    return l;
+  });
+  if (linksDepaginated.some((l) => l.pathname === curr.pathname)) return curr;
+  const last = linksDepaginated.at(-1) as URL;
+  if (last.pathname !== curr.pathname) curr.pathname = last.pathname;
+  return curr;
 }

@@ -5,12 +5,18 @@ import {
   PaginationStrategyPathnameParams,
   PaginationStrategySearchParams,
 } from './pagination-strategies';
-import { getPaginationLinks } from './pagination-utils';
+import { getPaginationLinks, parseURL, upgradePathname } from './pagination-utils';
 
-export function getPaginationStrategy(options: IPaginationStrategy) {
+export function getPaginationStrategy(options: IPaginationStrategy): PaginationStrategy {
   const { doc = document, url = location.href, paginationSelector = '.pagination' } = options;
 
-  const pagination = doc.querySelector(paginationSelector) as HTMLElement;
+  const pagination = doc.querySelector(paginationSelector);
+
+  if (!pagination) {
+    console.error('Found No Pagination');
+    return new PaginationStrategy(options);
+  }
+
   const pageLinks = getPaginationLinks(pagination, url).map((l) => new URL(l));
 
   console.log({ pageLinks: pageLinks.map((l) => l.href) });
@@ -29,8 +35,12 @@ export function getPaginationStrategy(options: IPaginationStrategy) {
     }
 
     if (pageLinks.some((h) => /\/(page\/)?\d+\/?$/.test(h.pathname))) {
-      const l = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h.pathname)).map((h) => h.href);
-      console.log('PaginationStrategyPathnameParams', l);
+      const pathnameMatched = pageLinks.filter((h) => /\/(page\/)?\d+\/?$/.test(h.pathname));
+      console.log(
+        'PaginationStrategyPathnameParams',
+        pathnameMatched.map((h) => h.href),
+      );
+      options.url = upgradePathname(parseURL(url), pathnameMatched);
       return PaginationStrategyPathnameParams;
     }
 
@@ -39,6 +49,8 @@ export function getPaginationStrategy(options: IPaginationStrategy) {
   };
 
   const paginationStrategy = new (getStrategy())(options);
+
+  console.log('paginationStrategy', paginationStrategy);
 
   return paginationStrategy;
 }
