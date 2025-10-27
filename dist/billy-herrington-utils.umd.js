@@ -633,11 +633,12 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "sy
     }
   }
   function getPaginationStrategy(options) {
-    const { doc = document, url = location.href } = options;
-    const pageLinks = getPaginationLinks(doc, url).map((l) => new URL(l));
+    const { doc = document, url = location.href, paginationSelector = ".pagination" } = options;
+    const pagination = doc.querySelector(paginationSelector);
+    const pageLinks = getPaginationLinks(pagination, url).map((l) => new URL(l));
     console.log({ pageLinks: pageLinks.map((l) => l.href) });
     const getStrategy = () => {
-      const dataParamLinks = Array.from(document.querySelectorAll("[data-parameters *= from]"));
+      const dataParamLinks = Array.from(pagination.querySelectorAll("[data-parameters *= from]"));
       if (dataParamLinks.length > 0) {
         console.log("PaginationStrategyDataParams", dataParamLinks);
         return PaginationStrategyDataParams;

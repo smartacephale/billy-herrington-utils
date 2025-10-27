@@ -8,13 +8,15 @@ import {
 import { getPaginationLinks } from './pagination-utils';
 
 export function getPaginationStrategy(options: IPaginationStrategy) {
-  const { doc = document, url = location.href } = options;
-  const pageLinks = getPaginationLinks(doc, url).map((l) => new URL(l));
+  const { doc = document, url = location.href, paginationSelector = '.pagination' } = options;
+
+  const pagination = doc.querySelector(paginationSelector) as HTMLElement;
+  const pageLinks = getPaginationLinks(pagination, url).map((l) => new URL(l));
 
   console.log({ pageLinks: pageLinks.map((l) => l.href) });
 
   const getStrategy = (): typeof PaginationStrategy => {
-    const dataParamLinks = Array.from(document.querySelectorAll('[data-parameters *= from]'));
+    const dataParamLinks = Array.from(pagination.querySelectorAll('[data-parameters *= from]'));
     if (dataParamLinks.length > 0) {
       console.log('PaginationStrategyDataParams', dataParamLinks);
       return PaginationStrategyDataParams;
