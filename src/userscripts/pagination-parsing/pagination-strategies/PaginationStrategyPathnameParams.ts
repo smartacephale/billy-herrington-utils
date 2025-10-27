@@ -2,8 +2,6 @@ import { getPaginationLinks } from '../pagination-utils';
 import { PaginationStrategy } from './PaginationStrategy';
 
 export class PaginationStrategyPathnameParams extends PaginationStrategy {
-  public pathnameSelector = /\/(\d+)\/?$/;
-
   extractPage = (a: HTMLAnchorElement | Location | string): number => {
     const href = typeof a === 'string' ? a : a.href;
     const { pathname } = new URL(href, this.doc.baseURI || this.url.origin);

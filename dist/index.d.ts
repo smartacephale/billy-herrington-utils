@@ -193,10 +193,13 @@ export declare class PaginationStrategy {
     doc: Document;
     url: URL;
     paginationSelector: string;
+    searchParamSelector: string;
+    pathnameSelector: RegExp;
     fixPaginationLast?: (n: number, offset?: number) => number;
     offsetMin: number;
     constructor(options?: IPaginationStrategy);
-    getPaginationElement(): HTMLElement;
+    getPaginationElement(): Element | null;
+    get hasPagination(): boolean;
     getPaginationOffset(): number;
     getPaginationLast(): number;
     getPaginationUrlGenerator(): (_: number) => string;
@@ -209,7 +212,6 @@ export declare class PaginationStrategyDataParams extends PaginationStrategy {
 }
 
 export declare class PaginationStrategyPathnameParams extends PaginationStrategy {
-    pathnameSelector: RegExp;
     extractPage: (a: HTMLAnchorElement | Location | string) => number;
     getPaginationLast(): number;
     getPaginationOffset(): number;
@@ -217,9 +219,7 @@ export declare class PaginationStrategyPathnameParams extends PaginationStrategy
 }
 
 export declare class PaginationStrategySearchParams extends PaginationStrategy {
-    searchParamSelector: string;
-    getPaginationElement(): HTMLElement;
-    extractPage(a: HTMLAnchorElement | Location | URL | string): number;
+    extractPage: (a: HTMLAnchorElement | Location | URL | string) => number;
     getPaginationLast(): number;
     getPaginationOffset(): number;
     getPaginationUrlGenerator(): (offset: number) => string;

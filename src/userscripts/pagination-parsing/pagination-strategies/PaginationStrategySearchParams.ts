@@ -2,8 +2,6 @@ import { getPaginationLinks } from '../pagination-utils';
 import { PaginationStrategy } from './PaginationStrategy';
 
 export class PaginationStrategySearchParams extends PaginationStrategy {
-  public searchParamSelector = 'page';
-
   extractPage = (a: HTMLAnchorElement | Location | URL | string): number => {
     const href = typeof a === 'string' ? a : a.href;
     const p = new URL(href).searchParams.get(this.searchParamSelector) as string;

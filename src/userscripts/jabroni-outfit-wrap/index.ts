@@ -15,7 +15,7 @@ export function createInfiniteScroller(
   const enabled = store.state.infiniteScrollEnabled as boolean;
 
   const paginationOffset = rules.paginationStrategy.getPaginationOffset();
-  const paginationElement = rules.paginationStrategy.getPaginationElement();
+  const paginationElement = rules.paginationStrategy.getPaginationElement() as HTMLElement;
   const paginationLast = rules.paginationStrategy.getPaginationLast();
   const paginationUrlGenerator = rules.paginationStrategy.getPaginationUrlGenerator();
 

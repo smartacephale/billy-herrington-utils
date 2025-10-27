@@ -56,7 +56,7 @@ function stringToWords(s) {
   return s.split(",").map((s2) => s2.trim().toLowerCase()).filter((_) => _);
 }
 function sanitizeStr(s) {
-  return s?.replace(/\n|\t/, " ").replace(/ {2,}/, " ").trim().toLowerCase() || "";
+  return s?.replace(/\n|\t/g, " ").replace(/ {2,}/g, " ").trim().toLowerCase() || "";
 }
 class DataFilter {
   constructor(rules, state) {
@@ -444,6 +444,8 @@ class PaginationStrategy {
     __publicField(this, "doc", document);
     __publicField(this, "url");
     __publicField(this, "paginationSelector", ".pagination");
+    __publicField(this, "searchParamSelector", "page");
+    __publicField(this, "pathnameSelector", /\/(\d+)\/?$/);
     __publicField(this, "fixPaginationLast");
     __publicField(this, "offsetMin", 1);
     if (options) {
@@ -454,7 +456,10 @@ class PaginationStrategy {
     this.url = parseURL(options?.url || this.doc.URL);
   }
   getPaginationElement() {
-    return this.doc.querySelector(this.paginationSelector) || this.doc;
+    return this.doc.querySelector(this.paginationSelector);
+  }
+  get hasPagination() {
+    return !!this.getPaginationElement();
   }
   getPaginationOffset() {
     return this.offsetMin;
@@ -550,7 +555,6 @@ class PaginationStrategyDataParams extends PaginationStrategy {
 class PaginationStrategyPathnameParams extends PaginationStrategy {
   constructor() {
     super(...arguments);
-    __publicField(this, "pathnameSelector", /\/(\d+)\/?$/);
     __publicField(this, "extractPage", (a) => {
       const href = typeof a === "string" ? a : a.href;
       const { pathname } = new URL(href, this.doc.baseURI || this.url.origin);
@@ -559,7 +563,7 @@ class PaginationStrategyPathnameParams extends PaginationStrategy {
   }
   getPaginationLast() {
     const links = getPaginationLinks(
-      this.getPaginationElement(),
+      this.getPaginationElement() || document,
       this.url.href,
       this.pathnameSelector
     );
@@ -590,20 +594,17 @@ class PaginationStrategyPathnameParams extends PaginationStrategy {
 class PaginationStrategySearchParams extends PaginationStrategy {
   constructor() {
     super(...arguments);
-    __publicField(this, "searchParamSelector", "page");
-  }
-  getPaginationElement() {
-    return this.doc.querySelector(this.paginationSelector) || this.doc;
-  }
-  extractPage(a) {
-    const href = typeof a === "string" ? a : a.href;
-    const p = new URL(href).searchParams.get(this.searchParamSelector);
-    return parseInt(p) || this.offsetMin;
+    __publicField(this, "extractPage", (a) => {
+      const href = typeof a === "string" ? a : a.href;
+      const p = new URL(href).searchParams.get(this.searchParamSelector);
+      return parseInt(p) || this.offsetMin;
+    });
   }
   getPaginationLast() {
-    const links = getPaginationLinks(this.getPaginationElement(), this.url.href).filter(
-      (h) => /(page|p)=\d+/.test(h)
-    );
+    const links = getPaginationLinks(
+      this.getPaginationElement() || document,
+      this.url.href
+    ).filter((h) => /(page|p)=\d+/.test(h));
     const pages = links.map(this.extractPage);
     const lastPage = Math.max(...pages, this.offsetMin);
     if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
@@ -613,7 +614,7 @@ class PaginationStrategySearchParams extends PaginationStrategy {
     if (this.doc === document) {
       return this.extractPage(this.url);
     }
-    const link = this.getPaginationElement().querySelector(
+    const link = this.getPaginationElement()?.querySelector(
       `a.active[href *= "${this.searchParamSelector}="]`
     );
     return this.extractPage(link);

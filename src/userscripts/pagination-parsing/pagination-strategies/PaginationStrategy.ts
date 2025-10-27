@@ -14,6 +14,8 @@ export class PaginationStrategy {
   public doc = document;
   public url: URL;
   public paginationSelector = '.pagination';
+  public searchParamSelector = 'page';
+  public pathnameSelector = /\/(\d+)\/?$/;
   public fixPaginationLast?: (n: number, offset?: number) => number;
   public offsetMin = 1;
 
