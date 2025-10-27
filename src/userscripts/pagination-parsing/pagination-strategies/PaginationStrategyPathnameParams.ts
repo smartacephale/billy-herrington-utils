@@ -1,11 +1,6 @@
 import { getPaginationLinks } from '../pagination-utils';
 import { PaginationStrategy } from './PaginationStrategy';
 
-// const fixPaginationLast = (n) => {
-//   if difference < 9 = 999
-// }
-// maybe update doc after scroll to fix issues
-
 export class PaginationStrategyPathnameParams extends PaginationStrategy {
   public pathnameSelector = /\/(\d+)\/?$/;
 
@@ -17,7 +12,7 @@ export class PaginationStrategyPathnameParams extends PaginationStrategy {
 
   getPaginationLast() {
     const links = getPaginationLinks(
-      this.getPaginationElement(),
+      (this.getPaginationElement() || document) as HTMLElement,
       this.url.href,
       this.pathnameSelector,
     );

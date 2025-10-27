@@ -4,20 +4,17 @@ import { PaginationStrategy } from './PaginationStrategy';
 export class PaginationStrategySearchParams extends PaginationStrategy {
   public searchParamSelector = 'page';
 
-  getPaginationElement() {
-    return (this.doc.querySelector(this.paginationSelector) || this.doc) as HTMLElement;
-  }
-
-  extractPage(a: HTMLAnchorElement | Location | URL | string): number {
+  extractPage = (a: HTMLAnchorElement | Location | URL | string): number => {
     const href = typeof a === 'string' ? a : a.href;
     const p = new URL(href).searchParams.get(this.searchParamSelector) as string;
     return parseInt(p) || this.offsetMin;
-  }
+  };
 
   getPaginationLast() {
-    const links = getPaginationLinks(this.getPaginationElement(), this.url.href).filter((h) =>
-      /(page|p)=\d+/.test(h),
-    );
+    const links = getPaginationLinks(
+      (this.getPaginationElement() || document) as HTMLElement,
+      this.url.href,
+    ).filter((h) => /(page|p)=\d+/.test(h));
     const pages = links.map(this.extractPage);
     const lastPage = Math.max(...pages, this.offsetMin);
     if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
@@ -28,7 +25,7 @@ export class PaginationStrategySearchParams extends PaginationStrategy {
     if (this.doc === document) {
       return this.extractPage(this.url);
     }
-    const link = this.getPaginationElement().querySelector(
+    const link = this.getPaginationElement()?.querySelector(
       `a.active[href *= "${this.searchParamSelector}="]`,
     ) as HTMLAnchorElement;
     return this.extractPage(link);

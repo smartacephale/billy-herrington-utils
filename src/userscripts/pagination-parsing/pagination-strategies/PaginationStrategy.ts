@@ -28,7 +28,11 @@ export class PaginationStrategy {
   }
 
   getPaginationElement() {
-    return (this.doc.querySelector(this.paginationSelector) || this.doc) as HTMLElement;
+    return this.doc.querySelector(this.paginationSelector);
+  }
+
+  get hasPagination() {
+    return !!this.getPaginationElement();
   }
 
   getPaginationOffset() {
