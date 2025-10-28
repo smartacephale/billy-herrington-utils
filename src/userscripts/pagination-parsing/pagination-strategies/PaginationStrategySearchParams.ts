@@ -8,11 +8,17 @@ export class PaginationStrategySearchParams extends PaginationStrategy {
     return parseInt(p) || this.offsetMin;
   };
 
+  static checkLink(link: URL, searchParamSelector?: string): boolean {
+    const searchParamSelectors = ['page', 'p'];
+    if (searchParamSelector) searchParamSelectors.push(searchParamSelector);
+    return searchParamSelectors.some((p) => link.searchParams.get(p) !== null);
+  }
+
   getPaginationLast() {
     const links = getPaginationLinks(
       (this.getPaginationElement() || document) as HTMLElement,
       this.url.href,
-    ).filter((h) => /(page|p)=\d+/.test(h));
+    ).filter((h) => PaginationStrategySearchParams.checkLink(new URL(h), this.searchParamSelector));
     const pages = links.map(this.extractPage);
     const lastPage = Math.max(...pages, this.offsetMin);
     if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);

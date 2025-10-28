@@ -220,6 +220,7 @@ export declare class PaginationStrategyPathnameParams extends PaginationStrategy
 
 export declare class PaginationStrategySearchParams extends PaginationStrategy {
     extractPage: (a: HTMLAnchorElement | Location | URL | string) => number;
+    static checkLink(link: URL, searchParamSelector?: string): boolean;
     getPaginationLast(): number;
     getPaginationOffset(): number;
     getPaginationUrlGenerator(): (offset: number) => string;

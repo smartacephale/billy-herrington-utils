@@ -14,7 +14,7 @@ export class PaginationStrategyTrash extends PaginationStrategy {
   getPaginationOffset() {
     return this.offsetMin;
   }
-
+  
   eHentaiNext = async () => {
     if (!unsafeWindow.PAGINATION_NEXT) {
       const hrefs = [...document.querySelectorAll('a#dnext[href]')] as Array<HTMLAnchorElement>;

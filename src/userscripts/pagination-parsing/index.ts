@@ -8,7 +8,12 @@ import {
 import { getPaginationLinks, parseURL, upgradePathname } from './pagination-utils';
 
 export function getPaginationStrategy(options: IPaginationStrategy): PaginationStrategy {
-  const { doc = document, url = location.href, paginationSelector = '.pagination' } = options;
+  const {
+    doc = document,
+    url = location.href,
+    paginationSelector = '.pagination',
+    searchParamSelector,
+  } = options;
 
   const pagination = doc.querySelector(paginationSelector);
 
@@ -28,8 +33,10 @@ export function getPaginationStrategy(options: IPaginationStrategy): PaginationS
       return PaginationStrategyDataParams;
     }
 
-    if (pageLinks.some((h) => /(page|p)=\d+/.test(h.search))) {
-      const l = pageLinks.filter((h) => /(page|p)=\d+/.test(h.search)).map((h) => h.href);
+    if (pageLinks.some((h) => PaginationStrategySearchParams.checkLink(h, searchParamSelector))) {
+      const l = pageLinks
+        .filter((h) => PaginationStrategySearchParams.checkLink(h, searchParamSelector))
+        .map((h) => h.href);
       console.log('PaginationStrategySearchParams', l);
       return PaginationStrategySearchParams;
     }

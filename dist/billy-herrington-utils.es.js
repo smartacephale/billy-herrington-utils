@@ -611,11 +611,16 @@ class PaginationStrategySearchParams extends PaginationStrategy {
       return parseInt(p) || this.offsetMin;
     });
   }
+  static checkLink(link, searchParamSelector) {
+    const searchParamSelectors = ["page", "p"];
+    if (searchParamSelector) searchParamSelectors.push(searchParamSelector);
+    return searchParamSelectors.some((p) => link.searchParams.get(p) !== null);
+  }
   getPaginationLast() {
     const links = getPaginationLinks(
       this.getPaginationElement() || document,
       this.url.href
-    ).filter((h) => /(page|p)=\d+/.test(h));
+    ).filter((h) => PaginationStrategySearchParams.checkLink(new URL(h), this.searchParamSelector));
     const pages = links.map(this.extractPage);
     const lastPage = Math.max(...pages, this.offsetMin);
     if (this.fixPaginationLast) return this.fixPaginationLast(lastPage);
@@ -640,7 +645,12 @@ class PaginationStrategySearchParams extends PaginationStrategy {
   }
 }
 function getPaginationStrategy(options) {
-  const { doc = document, url = location.href, paginationSelector = ".pagination" } = options;
+  const {
+    doc = document,
+    url = location.href,
+    paginationSelector = ".pagination",
+    searchParamSelector
+  } = options;
   const pagination = doc.querySelector(paginationSelector);
   if (!pagination) {
     console.error("Found No Pagination");
@@ -654,8 +664,8 @@ function getPaginationStrategy(options) {
       console.log("PaginationStrategyDataParams", dataParamLinks);
       return PaginationStrategyDataParams;
     }
-    if (pageLinks.some((h) => /(page|p)=\d+/.test(h.search))) {
-      const l = pageLinks.filter((h) => /(page|p)=\d+/.test(h.search)).map((h) => h.href);
+    if (pageLinks.some((h) => PaginationStrategySearchParams.checkLink(h, searchParamSelector))) {
+      const l = pageLinks.filter((h) => PaginationStrategySearchParams.checkLink(h, searchParamSelector)).map((h) => h.href);
       console.log("PaginationStrategySearchParams", l);
       return PaginationStrategySearchParams;
     }
