@@ -1,91 +1,145 @@
-export function parseDom(html: string): HTMLElement {
-  const parsed = new DOMParser().parseFromString(html, 'text/html').body;
-  return parsed.children.length > 1 ? parsed : parsed.firstElementChild as HTMLElement;
+import { sanitizeStr } from '../strings';
+import { waitForElementToAppear } from './dom-observers';
+
+export {
+  waitForElementToAppear,
+  waitForElementToDisappear,
+  watchDomChangesWithThrottle,
+  watchElementChildrenCount,
+} from './dom-observers';
+
+export function querySelectorLast<T extends Element = HTMLElement>(
+  root: ParentNode = document,
+  selector: string,
+): T | undefined {
+  const nodes = root.querySelectorAll<T>(selector);
+  return nodes.length > 0 ? nodes[nodes.length - 1] : undefined;
 }
 
-export function copyAttributes(target: HTMLElement | Element, source: HTMLElement | Element) {
+export function querySelectorLastNumber(selector: string, e: ParentNode = document) {
+  const text = querySelectorText(e, selector);
+  return Number(text.match(/\d+/g)?.pop() || 0);
+}
+
+export function querySelectorText(e: ParentNode, selector?: string): string {
+  if (typeof selector !== 'string') return '';
+  const text = e.querySelector<HTMLElement>(selector)?.innerText || '';
+  return sanitizeStr(text);
+}
+
+export function parseHtml(html: string): HTMLElement {
+  const parsed = new DOMParser().parseFromString(html, 'text/html').body;
+  if (parsed.children.length > 1) return parsed;
+  return parsed.firstElementChild as HTMLElement;
+}
+
+export function copyAttributes<T extends Element = HTMLElement>(target: T, source: T) {
   for (const attr of source.attributes) {
-    attr.nodeValue && target.setAttribute(attr.nodeName, attr.nodeValue);
+    if (attr.nodeValue) {
+      target.setAttribute(attr.nodeName, attr.nodeValue);
+    }
   }
 }
 
-export function replaceElementTag(e: HTMLElement | Element, tagName: string) {
+export function replaceElementTag(e: HTMLElement, tagName: string) {
   const newTagElement = document.createElement(tagName);
   copyAttributes(newTagElement, e);
+
   newTagElement.innerHTML = e.innerHTML;
   e.parentNode?.replaceChild(newTagElement, e);
+
   return newTagElement;
 }
 
-export function getAllUniqueParents(elements: HTMLCollection): Array<HTMLElement | Element> {
-  return Array.from(elements).reduce((acc, v) => {
-    if (v.parentElement && !acc.includes(v.parentElement as HTMLElement)) { acc.push(v.parentElement); }
-    return acc;
-  }, [] as Array<HTMLElement | Element>);
+export function removeClassesAndDataAttributes(
+  element: HTMLElement,
+  keyword: string,
+): void {
+  Array.from(element.classList).forEach((className) => {
+    if (className.includes(keyword)) {
+      element.classList.remove(className);
+    }
+  });
+
+  Array.from(element.attributes).forEach((attr) => {
+    if (attr.name.startsWith('data-') && attr.name.includes(keyword)) {
+      element.removeAttribute(attr.name);
+    }
+  });
 }
 
-export function findNextSibling(el: HTMLElement | Element) {
-  if (el.nextElementSibling) return el.nextElementSibling;
-  if (el.parentElement) return findNextSibling(el.parentElement);
+export function getCommonParents(elements: HTMLCollection | HTMLElement[]): HTMLElement[] {
+  const parents = Array.from(elements)
+    .map((el) => el.parentElement)
+    .filter((parent): parent is HTMLElement => parent !== null);
+
+  return [...new Set(parents)];
+}
+
+export function findNextSibling<T extends Element = HTMLElement>(e: T) {
+  if (e.nextElementSibling) return e.nextElementSibling;
+  if (e.parentElement) return findNextSibling(e.parentElement);
   return null;
 }
 
-export function waitForElementExists(parent: HTMLElement | Element, selector: string, callback: (el: Element) => void): void {
-  const observer = new MutationObserver((_mutations) => {
-    const el = parent.querySelector(selector);
-    if (el) {
-      observer.disconnect();
-      callback(el);
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-}
-
-export function watchElementChildrenCount(element: HTMLElement | Element,
-  callback: (observer: MutationObserver, count: number) => void): void {
-  let count = element.children.length;
-  const observer = new MutationObserver((mutationList, observer) => {
-    for (const mutation of mutationList) {
-      if (mutation.type === "childList") {
-        if (count !== element.children.length) {
-          count = element.children.length;
-          callback(observer, count);
-        }
-      }
-    }
-  });
-  observer.observe(element, { childList: true });
-}
-
-export function watchDomChangesWithThrottle(
-  element: HTMLElement | Element, 
-  callback: () => void,
-  throttle = 1000,
-  times = Infinity,
-  options: Record<string, boolean> = { childList: true, subtree: true, attributes: true }
+export function checkHomogenity<T extends HTMLElement>(
+  a: T,
+  b: T,
+  options: { id?: boolean; className?: boolean },
 ) {
-  let lastMutationTime: number;
-  let timeout: number;
-  let times_ = times;
-  const observer = new MutationObserver((_mutationList, _observer) => {
-    if (times_ !== Infinity && times_ < 1) {
-      observer.disconnect();
-      return;
+  if (!a || !b) return false;
+
+  if (options.id) {
+    if (a.id !== b.id) return false;
+  }
+
+  if (options.className) {
+    const ca = a.className;
+    const cb = b.className;
+    if (!(ca.length > cb.length ? ca.includes(cb) : cb.includes(ca))) {
+      return false;
     }
-    times_--;
-    const now = Date.now();
-    if (lastMutationTime && now - lastMutationTime < throttle) {
-      timeout && clearTimeout(timeout);
-    }
-    timeout = setTimeout(callback, throttle);
-    lastMutationTime = now;
-  });
-  observer.observe(element, options);
-  return observer;
+  }
+
+  return true;
 }
 
-export function downloader(options = { append: "", after: "", button: "", cbBefore: () => { } }) {
-  const btn = parseDom(options.button);
+export function instantiateTemplate(
+  sourceSelector: string,
+  attributeUpdates: Record<string, string>,
+  contentUpdates: Record<string, string>,
+): string {
+  const source = document.querySelector(sourceSelector) as HTMLElement;
+
+  const wrapper = document.createElement('div');
+  const clone = source.cloneNode(true);
+  wrapper.append(clone);
+
+  Object.entries(attributeUpdates).forEach(([attrName, attrValue]) => {
+    wrapper.querySelectorAll(`[${attrName}]`).forEach((element) => {
+      element.setAttribute(attrName, attrValue);
+    });
+  });
+
+  Object.entries(contentUpdates).forEach(([childSelector, textValue]) => {
+    wrapper.querySelectorAll<HTMLElement>(childSelector).forEach((element) => {
+      element.innerText = textValue;
+    });
+  });
+
+  return wrapper.innerHTML;
+}
+
+export function exterminateVideo(video: HTMLVideoElement) {
+  video.removeAttribute('src');
+  video.load();
+  video.remove();
+}
+
+export function downloader(
+  options = { append: '', after: '', button: '', cbBefore: () => {} },
+) {
+  const btn = parseHtml(options.button);
 
   if (options.append) document.querySelector(options.append)?.append(btn);
   if (options.after) document.querySelector(options.after)?.after(btn);
@@ -95,14 +149,8 @@ export function downloader(options = { append: "", after: "", button: "", cbBefo
 
     if (options.cbBefore) options.cbBefore();
 
-    waitForElementExists(document.body, 'video', (video: Element) => {
+    waitForElementToAppear(document.body, 'video', (video: Element) => {
       window.location.href = video.getAttribute('src') as string;
     });
   });
-}
-
-export function exterminateVideo(video: HTMLVideoElement) {
-  video.removeAttribute('src');
-  video.load();
-  video.remove();
 }

@@ -1,28 +1,37 @@
-import { parseDom } from '../dom';
+import { parseHtml } from '../dom';
 
-export const MOBILE_UA = [
-  'Mozilla/5.0 (Linux; Android 10; K)',
-  'AppleWebKit/537.36 (KHTML, like Gecko)',
-  'Chrome/114.0.0.0 Mobile Safari/537.36',
-].join(' ');
+export const MOBILE_UA = {
+  'User-Agent': [
+    'Mozilla/5.0 (Linux; Android 10; K)',
+    'AppleWebKit/537.36 (KHTML, like Gecko)',
+    'Chrome/114.0.0.0 Mobile Safari/537.36',
+  ].join(' '),
+} as const;
 
-export function fetchWith(
-  url: string,
-  options: Record<string, boolean> = { html: false, mobile: false },
-) {
-  const reqOpts = {};
-  if (options.mobile) Object.assign(reqOpts, { headers: new Headers({ 'User-Agent': MOBILE_UA }) });
-  return fetch(url, reqOpts)
-    .then((r) => r.text())
-    .then((r) => (options.html ? parseDom(r) : r));
+export async function fetchWith<T extends JSON | string | HTMLElement>(
+  input: RequestInfo | URL,
+  options: {
+    init?: RequestInit;
+    type: 'json' | 'html' | 'text';
+    mobile?: boolean;
+  },
+): Promise<T> {
+  const requestInit: RequestInit = options.init || {};
+
+  if (options.mobile) {
+    Object.assign(requestInit, { headers: new Headers(MOBILE_UA) });
+  }
+
+  const r = await fetch(input, requestInit).then((r) => r);
+
+  if (options.type === 'json') return (await r.json()) as T;
+  if (options.type === 'html') return parseHtml(await r.text()) as T;
+  return (await r.text()) as T;
 }
 
-export const fetchHtml = (url: string) => fetchWith(url, { html: true }) as Promise<HTMLElement>;
-
-export const fetchText = (url: string) => fetchWith(url) as Promise<string>;
-
-export function objectToFormData(object: Record<string, number | boolean | string>): FormData {
-  const formData = new FormData();
-  Object.entries(object).forEach(([k, v]) => formData.append(k, v as string));
-  return formData;
-}
+export const fetchJson = (input: RequestInfo | URL) =>
+  fetchWith<JSON>(input, { type: 'json' });
+export const fetchHtml = (input: RequestInfo | URL) =>
+  fetchWith<HTMLElement>(input, { type: 'html' });
+export const fetchText = (input: RequestInfo | URL) =>
+  fetchWith<string>(input, { type: 'text' });
