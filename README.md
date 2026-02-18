@@ -1,5 +1,11 @@
-### _daddy told us not to be ashamed of our utils_
+<div align="center">
+
+### _Daddy told us not to be ashamed of our Utils_
 ![](https://i.imgur.com/wwfRj0R.jpeg)
+
+
+[![NPM](https://nodei.co/npm/coomer-downloader.svg?color=lightgrey)](https://www.npmjs.com/package/billy-herrignton-utils)
+</div>
 
 ## Installation
 
